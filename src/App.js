@@ -25,7 +25,7 @@ function App() {
     ownerPhone: "",
     ownerAddress: "",
   });
-  const [transformerImages, setTransformerImages] = useState({}); // { [transformerNumber]: { baseline: url, maintenance: url } }
+  const [transformerImages, setTransformerImages] = useState({}); // { [transformerNumber]: { baseline: {url, weather}, maintenance: {url, weather} } }
 
   // Inspections state
   const [inspections, setInspections] = useState([]);
@@ -37,6 +37,7 @@ function App() {
     transformer: "",
     date: "",
     time: "",
+    isCompleted: false,
   });
 
   // Search states
@@ -45,8 +46,9 @@ function App() {
   const [searchFieldInspection, setSearchFieldInspection] = useState("transformerNumber");
   const [searchQueryInspection, setSearchQueryInspection] = useState("");
 
-  // For image upload type selection
+  // For image upload
   const [selectedImageType, setSelectedImageType] = useState("baseline");
+  const [weatherType, setWeatherType] = useState("Sunny");
 
   // Transformer handlers
   const handleTransformerInputChange = (e) => {
@@ -147,6 +149,7 @@ function App() {
         transformer: inspection.transformer,
         date: inspection.date,
         time: inspection.time,
+        isCompleted: inspection.isCompleted,
       });
     } else {
       setInspectionForm({
@@ -155,6 +158,7 @@ function App() {
         transformer: prefillTransformer,
         date: "",
         time: "",
+        isCompleted: false,
       });
     }
     setShowInspectionModal(true);
@@ -181,13 +185,21 @@ function App() {
       setNextInspectionId(nextInspectionId + 1);
     }
     setShowInspectionModal(false);
-    setInspectionForm({ id: null, branch: "", transformer: "", date: "", time: "" });
+    setInspectionForm({ id: null, branch: "", transformer: "", date: "", time: "", isCompleted: false });
   };
 
   const handleDeleteInspection = (id) => {
     if (window.confirm("Are you sure you want to delete this inspection?")) {
       setInspections(inspections.filter((i) => i.id !== id));
     }
+  };
+
+  const handleCompleteInspection = (id) => {
+    setInspections(
+      inspections.map((i) =>
+        i.id === id ? { ...i, isCompleted: true } : i
+      )
+    );
   };
 
   // Image upload handler
@@ -199,7 +211,7 @@ function App() {
         ...prev,
         [transformerNumber]: {
           ...prev[transformerNumber],
-          [selectedImageType]: imageUrl,
+          [selectedImageType]: { url: imageUrl, weather: weatherType },
         },
       }));
     }
@@ -214,14 +226,17 @@ function App() {
 
   // Inspection rows
   const inspectionRows = transformers.map((t) => {
-    const related = inspections.filter((i) => i.transformer === t.number);
-    const last = related.length ? related[related.length - 1] : null;
+    const related = inspections
+      .filter((i) => i.transformer === t.number)
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const completed = related.filter((i) => i.isCompleted);
+    const scheduled = related.filter((i) => !i.isCompleted);
     return {
       transformerNumber: t.number,
       inspectionNumber: related.length ? String(related.length) : "-",
-      lastInspectionDate: last ? last.date : "-",
-      maintenanceDate: "-",
-      status: related.length ? "Scheduled" : "Pending",
+      lastInspectionDate: completed.length ? completed[completed.length - 1].date : "-",
+      maintenanceDate: scheduled.length ? scheduled[0].date : "-",
+      status: scheduled.length ? "Scheduled" : "Pending",
     };
   });
 
@@ -616,6 +631,7 @@ function App() {
               <tbody>
                 {inspections
                   .filter((i) => i.transformer === selectedInspectionTransformer.number)
+                  .sort((a, b) => a.date.localeCompare(b.date))
                   .map((i) => (
                     <tr key={i.id}>
                       <td style={{ border: "1px solid #ddd", padding: "8px" }}>{i.branch}</td>
@@ -634,6 +650,14 @@ function App() {
                         >
                           Delete
                         </button>
+                        {!i.isCompleted && (
+                          <button
+                            onClick={() => handleCompleteInspection(i.id)}
+                            style={{ padding: "5px 10px", background: "green", color: "white", border: "none", borderRadius: "5px" }}
+                          >
+                            Complete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -688,8 +712,9 @@ function App() {
                   <div style={{ marginBottom: "15px", color: "#666" }}>
                     <span style={{ fontWeight: "bold" }}>Weather Condition:</span>
                     <select
+                      value={weatherType}
+                      onChange={(e) => setWeatherType(e.target.value)}
                       style={{ padding: "8px", marginLeft: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
-                      onChange={(e) => console.log(e.target.value)} // Placeholder for weather condition handling
                     >
                       <option value="Sunny">Sunny</option>
                       <option value="Cloudy">Cloudy</option>
@@ -720,9 +745,9 @@ function App() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "20px" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <strong>Baseline Image</strong>
-                  {transformerImages[selectedInspectionTransformer.number]?.baseline ? (
+                  {transformerImages[selectedInspectionTransformer.number]?.baseline?.url ? (
                     <img
-                      src={transformerImages[selectedInspectionTransformer.number].baseline}
+                      src={transformerImages[selectedInspectionTransformer.number].baseline.url}
                       alt="Baseline Image"
                       style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "5px", border: "1px solid #e0e0e0", marginTop: "10px" }}
                     />
@@ -731,12 +756,15 @@ function App() {
                       No image
                     </div>
                   )}
+                  <div style={{ marginTop: "5px" }}>
+                    Weather: {transformerImages[selectedInspectionTransformer.number]?.baseline?.weather || "Not specified"}
+                  </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <strong>Maintenance Image</strong>
-                  {transformerImages[selectedInspectionTransformer.number]?.maintenance ? (
+                  {transformerImages[selectedInspectionTransformer.number]?.maintenance?.url ? (
                     <img
-                      src={transformerImages[selectedInspectionTransformer.number].maintenance}
+                      src={transformerImages[selectedInspectionTransformer.number].maintenance.url}
                       alt="Maintenance Image"
                       style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "5px", border: "1px solid #e0e0e0", marginTop: "10px" }}
                     />
@@ -745,6 +773,9 @@ function App() {
                       No image
                     </div>
                   )}
+                  <div style={{ marginTop: "5px" }}>
+                    Weather: {transformerImages[selectedInspectionTransformer.number]?.maintenance?.weather || "Not specified"}
+                  </div>
                 </div>
               </div>
             </div>
