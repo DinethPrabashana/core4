@@ -20,8 +20,12 @@ function App() {
     pole: "",
     region: "",
     type: "Bulk",
+    ownerName: "",
+    ownerPhoto: "",
+    ownerPhone: "",
+    ownerAddress: "",
   });
-  const [transformerImages, setTransformerImages] = useState({}); // { [transformerNumber]: [imageUrls] }
+  const [transformerImages, setTransformerImages] = useState({}); // { [transformerNumber]: { baseline: url, maintenance: url } }
 
   // Inspections state
   const [inspections, setInspections] = useState([]);
@@ -41,9 +45,20 @@ function App() {
   const [searchFieldInspection, setSearchFieldInspection] = useState("transformerNumber");
   const [searchQueryInspection, setSearchQueryInspection] = useState("");
 
+  // For image upload type selection
+  const [selectedImageType, setSelectedImageType] = useState("baseline");
+
   // Transformer handlers
   const handleTransformerInputChange = (e) => {
     setTransformerForm({ ...transformerForm, [e.target.name]: e.target.value });
+  };
+
+  const handleOwnerPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const photoUrl = URL.createObjectURL(file);
+      setTransformerForm({ ...transformerForm, ownerPhoto: photoUrl });
+    }
   };
 
   const openTransformerModal = (transformer = null) => {
@@ -54,9 +69,23 @@ function App() {
         pole: transformer.pole,
         region: transformer.region,
         type: transformer.type,
+        ownerName: transformer.ownerName || "",
+        ownerPhoto: transformer.ownerPhoto || "",
+        ownerPhone: transformer.ownerPhone || "",
+        ownerAddress: transformer.ownerAddress || "",
       });
     } else {
-      setTransformerForm({ id: null, number: "", pole: "", region: "", type: "Bulk" });
+      setTransformerForm({ 
+        id: null, 
+        number: "", 
+        pole: "", 
+        region: "", 
+        type: "Bulk",
+        ownerName: "",
+        ownerPhoto: "",
+        ownerPhone: "",
+        ownerAddress: "",
+      });
     }
     setShowTransformerModal(true);
   };
@@ -78,7 +107,17 @@ function App() {
       setNextTransformerId(nextTransformerId + 1);
     }
     setShowTransformerModal(false);
-    setTransformerForm({ id: null, number: "", pole: "", region: "", type: "Bulk" });
+    setTransformerForm({ 
+      id: null, 
+      number: "", 
+      pole: "", 
+      region: "", 
+      type: "Bulk",
+      ownerName: "",
+      ownerPhoto: "",
+      ownerPhone: "",
+      ownerAddress: "",
+    });
   };
 
   const handleDeleteTransformer = (id) => {
@@ -158,7 +197,10 @@ function App() {
       const imageUrl = URL.createObjectURL(file);
       setTransformerImages((prev) => ({
         ...prev,
-        [transformerNumber]: [...(prev[transformerNumber] || []), imageUrl],
+        [transformerNumber]: {
+          ...prev[transformerNumber],
+          [selectedImageType]: imageUrl,
+        },
       }));
     }
   };
@@ -328,7 +370,8 @@ function App() {
                       border: "1px solid #2b95dbff",
                       borderRadius: "8px",
                       display: "flex",
-                      justifyContent: "space-between",
+                      flexDirection: "column",
+                      gap: "20px",
                     }}
                   >
                     <div style={{ display: "flex", gap: "15px" }}>
@@ -350,15 +393,31 @@ function App() {
                       </div>
                     </div>
 
-                    <img
-                      src={placeholderImage}
-                      alt="Transformer"
-                      style={{ width: "120px", height: "120px", borderRadius: "8px", objectFit: "cover", marginLeft: "20px" }}
-                    />
+                    <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
+                      <img
+                        src={selectedTransformer.ownerPhoto || placeholderImage}
+                        alt="Owner Photo"
+                        style={{ width: "120px", height: "120px", borderRadius: "8px", objectFit: "cover" }}
+                      />
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div style={{ padding: "10px", border: "1px solid #2b95dbff", borderRadius: "6px", background: "#fff" }}>
+                          <strong>Owner Name:</strong>
+                          <div>{selectedTransformer.ownerName || "-"}</div>
+                        </div>
+                        <div style={{ padding: "10px", border: "1px solid #2b95dbff", borderRadius: "6px", background: "#fff" }}>
+                          <strong>Owner Phone:</strong>
+                          <div>{selectedTransformer.ownerPhone || "-"}</div>
+                        </div>
+                        <div style={{ padding: "10px", border: "1px solid #2b95dbff", borderRadius: "6px", background: "#fff" }}>
+                          <strong>Owner Address:</strong>
+                          <div>{selectedTransformer.ownerAddress || "-"}</div>
+                        </div>
+                      </div>
+                    </div>
 
                     <button
                       onClick={() => setSelectedTransformer(null)}
-                      style={{ alignSelf: "flex-start", padding: "5px 12px", background: "#ff4d4d", color: "white", border: "none", borderRadius: "5px", cursor: "pointer", marginLeft: "15px" }}
+                      style={{ alignSelf: "flex-end", padding: "5px 12px", background: "#ff4d4d", color: "white", border: "none", borderRadius: "5px", cursor: "pointer" }}
                     >
                       Close
                     </button>
@@ -596,27 +655,36 @@ function App() {
                   <div style={{ marginBottom: "15px", color: "#666" }}>
                     <span style={{ fontWeight: "bold" }}>Status:</span> Pending
                   </div>
-                  <button
-                    onClick={() => document.getElementById(`thermalUpload-${selectedInspectionTransformer.number}`).click()}
-                    style={{
-                      padding: "10px 20px",
-                      backgroundColor: "#2b95dbff",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "5px",
-                      cursor: "pointer",
-                      marginBottom: "15px",
-                    }}
-                  >
-                    Upload thermal image
-                  </button>
-                  <input
-                    id={`thermalUpload-${selectedInspectionTransformer.number}`}
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleUploadImage(e, selectedInspectionTransformer.number)}
-                    style={{ display: "none" }}
-                  />
+                  <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+                    <select
+                      value={selectedImageType}
+                      onChange={(e) => setSelectedImageType(e.target.value)}
+                      style={{ padding: "8px", border: "1px solid #ccc", borderRadius: "4px" }}
+                    >
+                      <option value="baseline">Baseline Image</option>
+                      <option value="maintenance">Maintenance Image</option>
+                    </select>
+                    <button
+                      onClick={() => document.getElementById(`thermalUpload-${selectedInspectionTransformer.number}`).click()}
+                      style={{
+                        padding: "10px 20px",
+                        backgroundColor: "#2b95dbff",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Upload Image
+                    </button>
+                    <input
+                      id={`thermalUpload-${selectedInspectionTransformer.number}`}
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleUploadImage(e, selectedInspectionTransformer.number)}
+                      style={{ display: "none" }}
+                    />
+                  </div>
                   <div style={{ marginBottom: "15px", color: "#666" }}>
                     <span style={{ fontWeight: "bold" }}>Weather Condition:</span>
                     <select
@@ -649,15 +717,35 @@ function App() {
                   </ul>
                 </div>
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "20px" }}>
-                {(transformerImages[selectedInspectionTransformer.number] || []).map((url, idx) => (
-                  <img
-                    key={idx}
-                    src={url}
-                    alt={`Thermal Image ${idx + 1}`}
-                    style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "5px", border: "1px solid #e0e0e0" }}
-                  />
-                ))}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "20px", marginTop: "20px" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <strong>Baseline Image</strong>
+                  {transformerImages[selectedInspectionTransformer.number]?.baseline ? (
+                    <img
+                      src={transformerImages[selectedInspectionTransformer.number].baseline}
+                      alt="Baseline Image"
+                      style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "5px", border: "1px solid #e0e0e0", marginTop: "10px" }}
+                    />
+                  ) : (
+                    <div style={{ width: "150px", height: "150px", border: "1px dashed #ccc", display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px" }}>
+                      No image
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <strong>Maintenance Image</strong>
+                  {transformerImages[selectedInspectionTransformer.number]?.maintenance ? (
+                    <img
+                      src={transformerImages[selectedInspectionTransformer.number].maintenance}
+                      alt="Maintenance Image"
+                      style={{ width: "150px", height: "150px", objectFit: "cover", borderRadius: "5px", border: "1px solid #e0e0e0", marginTop: "10px" }}
+                    />
+                  ) : (
+                    <div style={{ width: "150px", height: "150px", border: "1px dashed #ccc", display: "flex", alignItems: "center", justifyContent: "center", marginTop: "10px" }}>
+                      No image
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>
@@ -690,6 +778,14 @@ function App() {
               <option value="Bulk">Bulk</option>
               <option value="Distribution">Distribution</option>
             </select>
+            <h3>Owner Details</h3>
+            <input name="ownerName" placeholder="Owner Name" value={transformerForm.ownerName} onChange={handleTransformerInputChange} style={{ width: "100%", margin: "8px 0", padding: "8px" }} />
+            <input name="ownerPhone" placeholder="Owner Phone Number" value={transformerForm.ownerPhone} onChange={handleTransformerInputChange} style={{ width: "100%", margin: "8px 0", padding: "8px" }} />
+            <input name="ownerAddress" placeholder="Owner Address" value={transformerForm.ownerAddress} onChange={handleTransformerInputChange} style={{ width: "100%", margin: "8px 0", padding: "8px" }} />
+            <div style={{ margin: "8px 0" }}>
+              <label>Owner Photo:</label>
+              <input type="file" accept="image/*" onChange={handleOwnerPhotoUpload} style={{ width: "100%", padding: "8px" }} />
+            </div>
             <div style={{ marginTop: "20px", textAlign: "right" }}>
               <button onClick={() => setShowTransformerModal(false)} style={{ padding: "8px 16px", marginRight: "10px", background: "#ccc", border: "none", borderRadius: "5px" }}>Cancel</button>
               <button onClick={handleSaveTransformer} style={{ padding: "8px 16px", background: "#2b95dbff", color: "white", border: "none", borderRadius: "5px" }}>Save</button>
