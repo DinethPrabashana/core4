@@ -1,0 +1,314 @@
+.app {
+  display: flex;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fc;
+}
+
+.sidebar {
+  width: 200px;
+  background-color: #ffffff;
+  border-right: 1px solid #e0e0e0;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #000000;
+  margin-bottom: 30px;
+}
+
+.sidebar-button {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: transparent;
+  border: none;
+  text-align: left;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.sidebar-button:hover {
+  background-color: #f0f0f0;
+}
+
+.sidebar-button.active {
+  font-weight: bold;
+  color: #6a5acd;
+}
+
+.main {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.sub-tabs {
+  display: flex;
+  gap: 10px;
+}
+
+.sub-tab-button {
+  padding: 8px 16px;
+  border: none;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.sub-tab-button.active {
+  background-color: #6a5acd;
+  color: white;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.content {
+  background-color: #ffffff;
+  padding: 20px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  flex: 1;
+  overflow: auto;
+}
+
+.transformer-tab {
+  display: flex;
+  flex-direction: column;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.add-button {
+  background-color: #6a5acd;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.filters input, .filters select {
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.filters button {
+  padding: 8px 16px;
+  background-color: #f0f0f0;
+  border: none;
+  cursor: pointer;
+}
+
+.transformer-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.transformer-table th, .transformer-table td {
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal label {
+  font-weight: bold;
+}
+
+.modal input, .modal select, .modal textarea {
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-buttons .confirm {
+  background-color: #6a5acd;
+  color: white;
+}
+
+.modal-buttons button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.transformer-details-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.back-button {
+  background-color: #f0f0f0;
+  border: none;
+  padding: 8px 16px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-bottom: 20px;
+}
+
+.transformer-info .top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.transformer-info .details-row {
+  margin-bottom: 10px;
+}
+
+.red-dot {
+  color: red;
+  font-weight: bold;
+}
+
+.transformer-info .stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.transformer-info .stats span {
+  background-color: #f0f0f0;
+  padding: 8px 16px;
+  border-radius: 20px;
+}
+
+.baseline-image {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.baseline-image img {
+  width: 20px; /* Placeholder */
+}
+
+.inspections-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.add-inspection {
+  background-color: #6a5acd;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.inspection-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.inspection-table th, .inspection-table td {
+  padding: 10px;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.status {
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.status.in-progress {
+  background-color: #e0f7fa;
+  color: #00838f;
+}
+
+.status.pending {
+  background-color: #ffebee;
+  color: #c2185b;
+}
+
+.status.completed {
+  background-color: #e8f5e9;
+  color: #388e3c;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
