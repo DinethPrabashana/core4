@@ -126,7 +126,7 @@ function App() {
       id: Date.now(),
       baselineImage: selectedTransformer?.baselineImage || null,
       maintenanceImage: null,
-      weather: "",
+      weather: selectedTransformer?.weather || "", // copy weather here
     };
 
     setInspections([...inspections, newInspection]);
@@ -210,7 +210,7 @@ function App() {
           inspection={viewInspectionData}
           transformers={transformers}
           onClose={() => setShowViewInspectionModal(false)}
-          updateInspection={handleUpdateInspection} // ✅ pass the update function
+          updateInspection={handleUpdateInspection} // pass the update function
         />
       )}
     </div>
