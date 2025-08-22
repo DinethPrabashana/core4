@@ -7,14 +7,15 @@ export default function InspectionList({
   setSearchFieldInspection,
   searchQueryInspection,
   setSearchQueryInspection,
-  setShowInspectionModal,
+  openAddInspectionModal,
+  openViewInspectionModal,
 }) {
   return (
     <div style={{ flexGrow: 1, padding: "20px" }}>
       <h1>Inspection Page</h1>
 
       <button
-        onClick={() => setShowInspectionModal(true)}
+        onClick={openAddInspectionModal}
         style={{
           padding: "10px 20px",
           marginBottom: "20px",
@@ -55,6 +56,7 @@ export default function InspectionList({
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Date</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Inspector</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Notes</th>
+            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -68,6 +70,14 @@ export default function InspectionList({
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>{inspection.date}</td>
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>{inspection.inspector}</td>
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>{inspection.notes}</td>
+                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
+                  <button
+                    style={{ padding: "5px 10px" }}
+                    onClick={() => openViewInspectionModal(inspection)}
+                  >
+                    View
+                  </button>
+                </td>
               </tr>
             );
           })}

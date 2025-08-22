@@ -9,16 +9,15 @@ export default function TransformerList({
   setSearchFieldDetails,
   searchQueryDetails,
   setSearchQueryDetails,
-  setShowModal, // this should be the function to open modal
+  setShowModal,
   transformers,
   setTransformers,
 }) {
   const [imageURL, setImageURL] = useState(null);
 
   useEffect(() => {
-    if (selectedTransformer?.owner?.photo) {
-      // Use URL if File object, else keep as string
-      const file = selectedTransformer.owner.photo;
+    if (selectedTransformer?.baselineImage) {
+      const file = selectedTransformer.baselineImage;
       if (typeof file === "string") {
         setImageURL(file);
       } else {
@@ -33,7 +32,7 @@ export default function TransformerList({
 
   const handleEdit = (t) => {
     setSelectedTransformer(t);
-    setShowModal(t); // pass the transformer to open modal with pre-filled data
+    setShowModal(t);
   };
 
   const handleDelete = (t) => {
@@ -44,28 +43,17 @@ export default function TransformerList({
   };
 
   return (
-    <div>
-      <button
-        onClick={() => setShowModal()} // open modal for adding new
-        style={{
-          padding: "10px 20px",
-          marginBottom: "20px",
-          backgroundColor: "#2b95dbff",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-        }}
-      >
+    <div className="transformer-container">
+      <button className="add-transformer-btn" onClick={() => setShowModal()}>
         + Add Transformer
       </button>
 
       {/* Search */}
-      <div style={{ marginBottom: "20px", display: "flex", gap: "10px" }}>
+      <div className="search-bar">
         <select
           value={searchFieldDetails}
           onChange={(e) => setSearchFieldDetails(e.target.value)}
-          style={{ padding: "8px" }}
+          className="search-select"
         >
           <option value="number">Transformer #</option>
           <option value="pole">Pole #</option>
@@ -77,115 +65,54 @@ export default function TransformerList({
           placeholder="Enter search value..."
           value={searchQueryDetails}
           onChange={(e) => setSearchQueryDetails(e.target.value)}
-          style={{ padding: "8px", flex: "1" }}
+          className="search-input"
         />
       </div>
 
       {/* Selected Transformer */}
       {selectedTransformer && (
-        <div
-          style={{
-            padding: "15px",
-            marginBottom: "20px",
-            background: "#e8f4fc",
-            border: "1px solid #2b95dbff",
-            borderRadius: "8px",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", gap: "15px" }}>
+        <div className="selected-transformer">
+          <div className="selected-info">
             {["number", "pole", "region", "type"].map((field) => (
-              <div
-                key={field}
-                style={{
-                  padding: "10px",
-                  border: "1px solid #2b95dbff",
-                  borderRadius: "6px",
-                  background: "#fff",
-                }}
-              >
+              <div key={field} className="info-card">
                 <strong>{field.charAt(0).toUpperCase() + field.slice(1)}:</strong>
                 <div>{selectedTransformer[field]}</div>
               </div>
             ))}
           </div>
-
           <img
-            src={
-              imageURL || placeholderImage
-            }
-            alt="Owner"
-            style={{
-              width: "120px",
-              height: "120px",
-              borderRadius: "8px",
-              objectFit: "cover",
-              marginLeft: "20px",
-            }}
+            src={imageURL || placeholderImage} // ✅ show baselineImage if uploaded
+            alt="Transformer"
+            className="image-preview"
           />
-
-          <button
-            onClick={() => setSelectedTransformer(null)}
-            style={{
-              alignSelf: "flex-start",
-              padding: "5px 12px",
-              background: "#ff4d4d",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer",
-              marginLeft: "15px",
-            }}
-          >
+          <button className="danger-btn" onClick={() => setSelectedTransformer(null)}>
             Close
           </button>
         </div>
       )}
 
       {/* Transformer Table */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
+      <table className="transformer-table">
         <thead>
-          <tr style={{ backgroundColor: "#f0f0f0" }}>
-            <th style={{ border: "1px solid #ddd", padding: "8px" }}>Transformer #</th>
-            <th style={{ border: "1px solid #ddd", padding: "8px" }}>Pole #</th>
-            <th style={{ border: "1px solid #ddd", padding: "8px" }}>Region</th>
-            <th style={{ border: "1px solid #ddd", padding: "8px" }}>Type</th>
-            <th style={{ border: "1px solid #ddd", padding: "8px" }}>Actions</th>
+          <tr>
+            <th>Transformer #</th>
+            <th>Pole #</th>
+            <th>Region</th>
+            <th>Type</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {filteredTransformers.map((t) => (
             <tr key={t.id}>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{t.number}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{t.pole}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{t.region}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>{t.type}</td>
-              <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                <button
-                  onClick={() => setSelectedTransformer(t)}
-                  style={{ marginRight: "5px", padding: "5px 10px" }}
-                >
-                  View
-                </button>
-                <button
-                  onClick={() => handleEdit(t)}
-                  style={{ marginRight: "5px", padding: "5px 10px" }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(t)}
-                  style={{
-                    padding: "5px 10px",
-                    background: "#ff4d4d",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "5px",
-                  }}
-                >
-                  Delete
-                </button>
+              <td>{t.number}</td>
+              <td>{t.pole}</td>
+              <td>{t.region}</td>
+              <td>{t.type}</td>
+              <td className="transformer-actions">
+                <button onClick={() => setSelectedTransformer(t)}>View</button>
+                <button onClick={() => handleEdit(t)}>Edit</button>
+                <button className="danger-btn" onClick={() => handleDelete(t)}>Delete</button>
               </td>
             </tr>
           ))}

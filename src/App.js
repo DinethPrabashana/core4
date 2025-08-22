@@ -5,13 +5,13 @@ import TransformerList from "./components/TransformerList";
 import TransformerModal from "./components/TransformerModal";
 import InspectionList from "./components/InspectionList";
 import InspectionModal from "./components/InspectionModal";
+import InspectionViewModal from "./components/InspectionViewModal";
+import "./App.css";
 
 function App() {
-  // --- Pages & Tabs ---
   const [activePage, setActivePage] = useState("page1");
   const [activeTab, setActiveTab] = useState("details");
 
-  // --- Transformers ---
   const [transformers, setTransformers] = useState([]);
   const [filteredTransformers, setFilteredTransformers] = useState([]);
   const [selectedTransformer, setSelectedTransformer] = useState(null);
@@ -22,20 +22,16 @@ function App() {
     pole: "",
     region: "",
     type: "Bulk",
-  });
-  const [ownerData, setOwnerData] = useState({
-    name: "",
-    phone: "",
-    address: "",
-    photo: null,
+    baselineImage: null,
   });
   const [searchFieldDetails, setSearchFieldDetails] = useState("number");
   const [searchQueryDetails, setSearchQueryDetails] = useState("");
 
-  // --- Inspections ---
   const [inspections, setInspections] = useState([]);
   const [filteredInspections, setFilteredInspections] = useState([]);
-  const [showInspectionModal, setShowInspectionModal] = useState(false);
+  const [showAddInspectionModal, setShowAddInspectionModal] = useState(false);
+  const [showViewInspectionModal, setShowViewInspectionModal] = useState(false);
+  const [viewInspectionData, setViewInspectionData] = useState(null);
   const [inspectionForm, setInspectionForm] = useState({
     transformer: "",
     date: "",
@@ -45,7 +41,7 @@ function App() {
   const [searchFieldInspection, setSearchFieldInspection] = useState("");
   const [searchQueryInspection, setSearchQueryInspection] = useState("");
 
-  // --- Filter Transformers ---
+  // Filtering Transformers
   useEffect(() => {
     setFilteredTransformers(
       transformers.filter((t) => {
@@ -56,7 +52,7 @@ function App() {
     );
   }, [searchQueryDetails, searchFieldDetails, transformers]);
 
-  // --- Filter Inspections ---
+  // Filtering Inspections
   useEffect(() => {
     setFilteredInspections(
       inspections.filter((i) => {
@@ -67,25 +63,19 @@ function App() {
     );
   }, [searchQueryInspection, searchFieldInspection, inspections]);
 
-  // --- Handlers ---
+  // Transformer handlers
   const handleTransformerChange = (e) => {
-    const { name, value } = e.target;
-    setTransformerForm({ ...transformerForm, [name]: value });
-  };
-
-  const handleOwnerChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === "photo") {
-      setOwnerData({ ...ownerData, photo: files[0] });
+    if (name === "baselineImage" && files) {
+      setTransformerForm({ ...transformerForm, baselineImage: files[0] });
     } else {
-      setOwnerData({ ...ownerData, [name]: value });
+      setTransformerForm({ ...transformerForm, [name]: value });
     }
   };
 
   const handleAddTransformer = () => {
     const t = {
       ...transformerForm,
-      owner: ownerData,
       id: transformerForm.id || Date.now(),
     };
     setTransformers((prev) =>
@@ -104,8 +94,8 @@ function App() {
         pole: t.pole,
         region: t.region,
         type: t.type,
+        baselineImage: t.baselineImage || null,
       });
-      setOwnerData({ ...t.owner });
     } else {
       setTransformerForm({
         id: null,
@@ -113,34 +103,44 @@ function App() {
         pole: "",
         region: "",
         type: "Bulk",
+        baselineImage: null,
       });
-      setOwnerData({ name: "", phone: "", address: "", photo: null });
     }
     setShowTransformerModal(true);
   };
 
+  // Inspection handlers
   const handleInspectionChange = (e) => {
     const { name, value } = e.target;
     setInspectionForm({ ...inspectionForm, [name]: value });
   };
 
   const handleScheduleInspection = () => {
-    const transformerId = parseInt(inspectionForm.transformer, 10); // Convert to number
-    const newInspection = { 
-      ...inspectionForm, 
-      transformer: transformerId, 
-      id: Date.now() 
+    const transformerId = parseInt(inspectionForm.transformer, 10);
+    const selectedTransformer = transformers.find((t) => t.id === transformerId);
+
+    const newInspection = {
+      ...inspectionForm,
+      transformer: transformerId,
+      id: Date.now(),
+      baselineImage: selectedTransformer?.baselineImage || null,
     };
+
     setInspections([...inspections, newInspection]);
-    setShowInspectionModal(false);
+    setShowAddInspectionModal(false);
     setInspectionForm({ transformer: "", date: "", inspector: "", notes: "" });
   };
 
+  const handleViewInspection = (inspection) => {
+    setViewInspectionData(inspection);
+    setShowViewInspectionModal(true);
+  };
+
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div className="app">
       <Sidebar setActivePage={setActivePage} />
 
-      <div style={{ flexGrow: 1, padding: "20px", overflowY: "auto" }}>
+      <div className="content">
         {activePage === "page1" && (
           <>
             <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -162,14 +162,14 @@ function App() {
 
             {activeTab === "inspection" && (
               <InspectionList
-                inspections={inspections}
+                filteredInspections={filteredInspections}
                 transformers={transformers}
                 searchFieldInspection={searchFieldInspection}
                 setSearchFieldInspection={setSearchFieldInspection}
                 searchQueryInspection={searchQueryInspection}
                 setSearchQueryInspection={setSearchQueryInspection}
-                setShowInspectionModal={setShowInspectionModal}
-                filteredInspections={filteredInspections}
+                openAddInspectionModal={() => setShowAddInspectionModal(true)}
+                openViewInspectionModal={handleViewInspection}
               />
             )}
           </>
@@ -178,25 +178,30 @@ function App() {
         {activePage === "page2" && <h1>Settings Page</h1>}
       </div>
 
-      {/* Modals */}
       {showTransformerModal && (
         <TransformerModal
           formData={transformerForm}
-          ownerData={ownerData}
           handleInputChange={handleTransformerChange}
-          handleOwnerChange={handleOwnerChange}
           handleAddTransformer={handleAddTransformer}
           onClose={() => setShowTransformerModal(false)}
         />
       )}
 
-      {showInspectionModal && (
+      {showAddInspectionModal && (
         <InspectionModal
           transformers={transformers}
           inspectionForm={inspectionForm}
           handleInspectionChange={handleInspectionChange}
           handleScheduleInspection={handleScheduleInspection}
-          onClose={() => setShowInspectionModal(false)}
+          onClose={() => setShowAddInspectionModal(false)}
+        />
+      )}
+
+      {showViewInspectionModal && viewInspectionData && (
+        <InspectionViewModal
+          inspection={viewInspectionData}
+          transformers={transformers}
+          onClose={() => setShowViewInspectionModal(false)}
         />
       )}
     </div>
