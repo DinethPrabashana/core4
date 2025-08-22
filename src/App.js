@@ -124,6 +124,8 @@ function App() {
       transformer: transformerId,
       id: Date.now(),
       baselineImage: selectedTransformer?.baselineImage || null,
+      maintenanceImage: null,
+      weather: "",
     };
 
     setInspections([...inspections, newInspection]);
@@ -134,6 +136,11 @@ function App() {
   const handleViewInspection = (inspection) => {
     setViewInspectionData(inspection);
     setShowViewInspectionModal(true);
+  };
+
+  // Update inspection with maintenance image or weather
+  const handleUpdateInspection = (updatedInspection) => {
+    setInspections(inspections.map((i) => (i.id === updatedInspection.id ? updatedInspection : i)));
   };
 
   return (
@@ -202,6 +209,7 @@ function App() {
           inspection={viewInspectionData}
           transformers={transformers}
           onClose={() => setShowViewInspectionModal(false)}
+          updateInspection={handleUpdateInspection} // ✅ pass the update function
         />
       )}
     </div>
