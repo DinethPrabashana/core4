@@ -56,8 +56,12 @@ export default function InspectionModal({
         </label>
 
         <div className="modal-buttons">
-          <button onClick={handleScheduleInspection}>Add Inspection</button>
-          <button onClick={onClose}>Cancel</button>
+    <button className="inspection-save-btn" onClick={handleScheduleInspection}>
+    Add Inspection
+  </button>
+  <button className="inspection-cancel-btn" onClick={onClose}>
+    Cancel
+  </button>
         </div>
       </div>
     </div>

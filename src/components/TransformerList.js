@@ -43,7 +43,10 @@ export default function TransformerList({
   };
 
   return (
-    <div className="transformer-container">
+    <div className="transformer-container" style={{ padding: "20px" }}>
+      {/* Page Title */}
+      <h1 style={{ textAlign: "left", marginBottom: "20px" }}>Transformer Page</h1>
+
       <button className="add-transformer-btn" onClick={() => setShowModal()}>
         + Add Transformer
       </button>
@@ -116,7 +119,7 @@ export default function TransformerList({
       {/* Transformer Table */}
       <table className="transformer-table">
         <thead>
-          <tr>
+          <tr style={{ backgroundColor: "#000", color: "#fff" }}>
             <th>Transformer #</th>
             <th>Pole #</th>
             <th>Region</th>

@@ -8,7 +8,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
 
   // Independent weather for each image
-  const [baselineWeather, setBaselineWeather] = useState(inspection.baselineWeather || "");
+const [baselineWeather, setBaselineWeather] = useState(
+  inspection.baselineWeather ?? transformer?.weather ?? ""
+);
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "");
 
   // Independent upload dates for each image
@@ -231,8 +233,8 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
         {/* Save / Close Buttons */}
         <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-          <button onClick={handleSave} style={{ padding: "8px 15px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "5px" }}>Save</button>
-          <button onClick={onClose} style={{ padding: "8px 15px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "5px" }}>Close</button>
+            <button className="inspector-save-btn" onClick={handleSave}>Save</button>
+            <button className="inspector-close-btn" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

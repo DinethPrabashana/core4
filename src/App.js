@@ -96,6 +96,7 @@ function App() {
         region: t.region,
         type: t.type,
         baselineImage: t.baselineImage || null,
+        weather: t.weather || "", 
       });
     } else {
       setTransformerForm({
@@ -105,6 +106,7 @@ function App() {
         region: "",
         type: "Bulk",
         baselineImage: null,
+        weather: "",
       });
     }
     setShowTransformerModal(true);

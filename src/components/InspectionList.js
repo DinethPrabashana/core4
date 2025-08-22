@@ -14,18 +14,8 @@ export default function InspectionList({
     <div style={{ flexGrow: 1, padding: "20px" }}>
       <h1>Inspection Page</h1>
 
-      <button
-        onClick={openAddInspectionModal}
-        style={{
-          padding: "10px 20px",
-          marginBottom: "20px",
-          backgroundColor: "#02090fff",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-        }}
-      >
-        Schedule Inspection
+      <button className="schedule-btn" onClick={openAddInspectionModal}>
+        + Schedule Inspection
       </button>
 
       <div style={{ marginBottom: "20px" }}>

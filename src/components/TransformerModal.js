@@ -46,7 +46,6 @@ export default function TransformerModal({
         <label>Baseline Image</label>
         <input type="file" name="baselineImage" onChange={handleInputChange} />
 
-        {/* Weather Dropdown */}
         <label>Weather</label>
         <select
           name="weather"
