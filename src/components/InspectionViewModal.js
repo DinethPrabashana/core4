@@ -125,9 +125,11 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
             <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
             <p><strong>Pole:</strong> {transformer?.pole || "N/A"}</p>
             <p><strong>Region:</strong> {transformer?.region || "N/A"}</p>
+            <p><strong>Location:</strong> {transformer?.location || "N/A"}</p> 
             <p><strong>Type:</strong> {transformer?.type || "N/A"}</p>
             <p><strong>Inspector:</strong> {inspection.inspector || "N/A"}</p>
             <p><strong>Inspection Date:</strong> {inspection.date || "N/A"}</p>
+
           </div>
 
           <div
