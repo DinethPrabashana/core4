@@ -46,6 +46,19 @@ export default function TransformerModal({
         <label>Baseline Image</label>
         <input type="file" name="baselineImage" onChange={handleInputChange} />
 
+        {/* Weather Dropdown */}
+        <label>Weather</label>
+        <select
+          name="weather"
+          value={formData.weather || ""}
+          onChange={handleInputChange}
+        >
+          <option value="">Select Weather</option>
+          <option value="Sunny">Sunny</option>
+          <option value="Rainy">Rainy</option>
+          <option value="Cloudy">Cloudy</option>
+        </select>
+
         <div className="modal-buttons">
           <button className="cancel-btn" onClick={onClose}>
             Cancel

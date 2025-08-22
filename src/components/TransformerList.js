@@ -71,23 +71,45 @@ export default function TransformerList({
 
       {/* Selected Transformer */}
       {selectedTransformer && (
-        <div className="selected-transformer">
-          <div className="selected-info">
+        <div
+          className="selected-transformer"
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "flex-start",
+            gap: "20px",
+            padding: "15px",
+          }}
+        >
+          {/* Transformer Info */}
+          <div className="selected-info" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {["number", "pole", "region", "type"].map((field) => (
               <div key={field} className="info-card">
                 <strong>{field.charAt(0).toUpperCase() + field.slice(1)}:</strong>
                 <div>{selectedTransformer[field]}</div>
               </div>
             ))}
+
+            <button className="danger-btn" onClick={() => setSelectedTransformer(null)}>
+              Close
+            </button>
           </div>
-          <img
-            src={imageURL || placeholderImage} // ✅ show baselineImage if uploaded
-            alt="Transformer"
-            className="image-preview"
-          />
-          <button className="danger-btn" onClick={() => setSelectedTransformer(null)}>
-            Close
-          </button>
+
+          {/* Image Section */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
+            <strong style={{ fontSize: "16px", marginBottom: "5px" }}>Baseline Image</strong>
+            <img
+              src={imageURL || placeholderImage}
+              alt="Transformer"
+              style={{
+                width: "300px",
+                height: "300px",
+                objectFit: "cover",
+                border: "1px solid #ccc",
+                borderRadius: "8px",
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -110,9 +132,9 @@ export default function TransformerList({
               <td>{t.region}</td>
               <td>{t.type}</td>
               <td className="transformer-actions">
-                <button onClick={() => setSelectedTransformer(t)}>View</button>
-                <button onClick={() => handleEdit(t)}>Edit</button>
-                <button className="danger-btn" onClick={() => handleDelete(t)}>Delete</button>
+                <button className="view-btn" onClick={() => setSelectedTransformer(t)}>View</button>
+                <button className="edit-btn" onClick={() => handleEdit(t)}>Edit</button>
+                <button className="delete-btn" onClick={() => handleDelete(t)}>Delete</button>
               </td>
             </tr>
           ))}

@@ -23,6 +23,7 @@ function App() {
     region: "",
     type: "Bulk",
     baselineImage: null,
+    weather: "",
   });
   const [searchFieldDetails, setSearchFieldDetails] = useState("number");
   const [searchQueryDetails, setSearchQueryDetails] = useState("");

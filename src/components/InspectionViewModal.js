@@ -3,38 +3,50 @@ import React, { useState } from "react";
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection }) {
   const transformer = transformers.find((t) => t.id === inspection.transformer);
 
-  // Local state for baseline and maintenance images
+  // State for images
   const [baselineImage, setBaselineImage] = useState(inspection.baselineImage || null);
   const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
-  const [weather, setWeather] = useState(inspection.weather || "");
 
-  // Convert baseline image to URL for preview
+  // Independent weather for each image
+  const [baselineWeather, setBaselineWeather] = useState(inspection.baselineWeather || "");
+  const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "");
+
+  // Independent upload dates for each image
+  const [baselineUploadDate, setBaselineUploadDate] = useState(
+    inspection.baselineUploadDate || (baselineImage ? new Date().toLocaleString() : null)
+  );
+  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(
+    inspection.maintenanceUploadDate || (maintenanceImage ? new Date().toLocaleString() : null)
+  );
+
+  // URLs for preview
   const baselineImageURL = baselineImage
     ? typeof baselineImage === "string"
       ? baselineImage
       : URL.createObjectURL(baselineImage)
     : null;
 
-  // Convert maintenance image to URL for preview
   const maintenanceImageURL = maintenanceImage
     ? typeof maintenanceImage === "string"
       ? maintenanceImage
       : URL.createObjectURL(maintenanceImage)
     : null;
 
-  // Handlers
+  // File upload handlers
   const handleBaselineUpload = (e) => {
     const file = e.target.files[0];
-    if (file) setBaselineImage(file);
+    if (file) {
+      setBaselineImage(file);
+      setBaselineUploadDate(new Date().toLocaleString());
+    }
   };
 
   const handleMaintenanceUpload = (e) => {
     const file = e.target.files[0];
-    if (file) setMaintenanceImage(file);
-  };
-
-  const handleWeatherChange = (e) => {
-    setWeather(e.target.value);
+    if (file) {
+      setMaintenanceImage(file);
+      setMaintenanceUploadDate(new Date().toLocaleString());
+    }
   };
 
   const handleSave = () => {
@@ -43,11 +55,19 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         ...inspection,
         baselineImage,
         maintenanceImage,
-        weather,
+        baselineWeather,
+        maintenanceWeather,
+        baselineUploadDate,
+        maintenanceUploadDate,
       });
     }
     onClose();
   };
+
+  const getMetadata = (image, type) => ({
+    type,
+    uploader: "Admin",
+  });
 
   return (
     <div style={{
@@ -62,139 +82,157 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         backgroundColor: "white",
         padding: "30px",
         borderRadius: "10px",
-        width: "80%",
+        width: "85%",
         maxHeight: "90%",
-        overflowY: "auto"
+        overflowY: "auto",
+        boxShadow: "0px 0px 20px rgba(0,0,0,0.3)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px"
       }}>
-        <h2>Inspection Details</h2>
-        <p><strong>Transformer:</strong> {transformer?.number || "N/A"}</p>
-        <p><strong>Date:</strong> {inspection.date}</p>
-        <p><strong>Inspector:</strong> {inspection.inspector}</p>
-        <p><strong>Notes:</strong> {inspection.notes}</p>
+        <h1 style={{ textAlign: "center", marginBottom: "20px" }}>Thermal Image</h1>
 
-        {/* Weather dropdown */}
-        <label>
-          Weather:
-          <select value={weather} onChange={handleWeatherChange} style={{ marginLeft: "10px" }}>
-            <option value="">Select</option>
-            <option value="Sunny">Sunny</option>
-            <option value="Rainy">Rainy</option>
-            <option value="Cloudy">Cloudy</option>
-          </select>
-        </label>
+        {/* Transformer Info */}
+        <div style={{
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          padding: "15px",
+          backgroundColor: "#f9f9f9",
+          display: "flex",
+          flexDirection: "column",
+          gap: "5px"
+        }}>
+          <h3>Transformer Info</h3>
+          <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
+          <p><strong>Pole:</strong> {transformer?.pole || "N/A"}</p>
+          <p><strong>Region:</strong> {transformer?.region || "N/A"}</p>
+          <p><strong>Type:</strong> {transformer?.type || "N/A"}</p>
+        </div>
 
-        <hr />
+        {/* Workflow Steps Box */}
+        <div style={{
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          padding: "15px",
+          backgroundColor: "#f5f5f5",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px"
+        }}>
+          <h3 style={{ margin: "0 0 10px 0" }}>Workflow Progress (Inactive)</h3>
+          {["Thermal Image Upload", "AI Analysis", "Thermal Image Review"].map((step) => (
+            <div key={step}>
+              <p style={{ margin: "2px 0" }}>• {step}</p>
+              <div style={{ width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px" }} />
+            </div>
+          ))}
+        </div>
 
-        {/* Images side by side */}
-        <div style={{ display: "flex", gap: "20px", marginTop: "20px", flexWrap: "wrap" }}>
+        {/* Images Side by Side */}
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "10px" }}>
           {/* Baseline Image */}
-          <div style={{
-            flex: 1,
-            border: "2px dashed #ccc",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexDirection: "column",
-            padding: "10px",
-            maxWidth: "100%",
-          }}>
-            <strong>Baseline Image</strong>
-
-            {/* Hidden input */}
-            <input
-              type="file"
-              onChange={handleBaselineUpload}
-              style={{ display: "none" }}
-              id="baselineUpload"
-            />
-
-            {/* Custom upload button */}
-            <label
-              htmlFor="baselineUpload"
-              style={{
-                marginTop: "10px",
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{
+              border: "2px dashed #ccc",
+              padding: "10px",
+              minHeight: "300px",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px"
+            }}>
+              <strong>Baseline Image</strong>
+              <input type="file" id="baselineUpload" onChange={handleBaselineUpload} style={{ display: "none" }} />
+              <label htmlFor="baselineUpload" style={{
                 padding: "5px 10px",
                 backgroundColor: "#28a745",
                 color: "white",
                 borderRadius: "5px",
                 cursor: "pointer"
-              }}
-            >
-              Upload
-            </label>
-
-            {/* Image preview */}
-            {baselineImageURL ? (
-              <img
-                src={baselineImageURL}
-                alt="Baseline"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "400px",
-                  marginTop: "10px",
-                  objectFit: "contain",
-                }}
-              />
-            ) : (
-              <span style={{ marginTop: "10px" }}>No Image</span>
-            )}
+              }}>Upload</label>
+              {baselineImageURL && (
+                <img src={baselineImageURL} alt="Baseline" style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "contain" }} />
+              )}
+            </div>
+            {/* Metadata box below image */}
+            <div style={{
+              width: "100%",
+              border: "1px solid #ccc",
+              borderRadius: "5px",
+              backgroundColor: "#f0f0f0",
+              padding: "10px",
+              marginTop: "5px"
+            }}>
+              <label>
+                <strong>Weather:</strong>
+                <select value={baselineWeather} onChange={(e) => setBaselineWeather(e.target.value)} style={{ marginLeft: "10px", padding: "3px" }}>
+                  <option value="">Select</option>
+                  <option value="Sunny">Sunny</option>
+                  <option value="Rainy">Rainy</option>
+                  <option value="Cloudy">Cloudy</option>
+                </select>
+              </label>
+              <p><strong>Upload Date/Time:</strong> {baselineUploadDate || "N/A"}</p>
+              <p><strong>Image Type:</strong> Baseline</p>
+              <p><strong>Uploader:</strong> {getMetadata(baselineImage, "Baseline").uploader}</p>
+            </div>
           </div>
 
           {/* Maintenance Image */}
-          <div style={{
-            flex: 1,
-            border: "2px dashed #ccc",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            flexDirection: "column",
-            padding: "10px",
-            maxWidth: "100%",
-          }}>
-            <strong>Maintenance Image</strong>
-
-            {/* Hidden input */}
-            <input
-              type="file"
-              onChange={handleMaintenanceUpload}
-              style={{ display: "none" }}
-              id="maintenanceUpload"
-            />
-
-            {/* Custom upload button */}
-            <label
-              htmlFor="maintenanceUpload"
-              style={{
-                marginTop: "10px",
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{
+              border: "2px dashed #ccc",
+              padding: "10px",
+              minHeight: "300px",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px"
+            }}>
+              <strong>Maintenance Image</strong>
+              <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} style={{ display: "none" }} />
+              <label htmlFor="maintenanceUpload" style={{
                 padding: "5px 10px",
                 backgroundColor: "#007bff",
                 color: "white",
                 borderRadius: "5px",
                 cursor: "pointer"
-              }}
-            >
-              Upload
-            </label>
-
-            {/* Image preview */}
-            {maintenanceImageURL && (
-              <img
-                src={maintenanceImageURL}
-                alt="Maintenance"
-                style={{
-                  maxWidth: "100%",
-                  maxHeight: "400px",
-                  marginTop: "10px",
-                  objectFit: "contain",
-                }}
-              />
-            )}
+              }}>Upload</label>
+              {maintenanceImageURL && (
+                <img src={maintenanceImageURL} alt="Maintenance" style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "contain" }} />
+              )}
+            </div>
+            {/* Metadata box below image */}
+            <div style={{
+              width: "100%",
+              border: "1px solid #ccc",
+              borderRadius: "5px",
+              backgroundColor: "#f0f0f0",
+              padding: "10px",
+              marginTop: "5px"
+            }}>
+              <label>
+                <strong>Weather:</strong>
+                <select value={maintenanceWeather} onChange={(e) => setMaintenanceWeather(e.target.value)} style={{ marginLeft: "10px", padding: "3px" }}>
+                  <option value="">Select</option>
+                  <option value="Sunny">Sunny</option>
+                  <option value="Rainy">Rainy</option>
+                  <option value="Cloudy">Cloudy</option>
+                </select>
+              </label>
+              <p><strong>Upload Date/Time:</strong> {maintenanceUploadDate || "N/A"}</p>
+              <p><strong>Image Type:</strong> Maintenance</p>
+              <p><strong>Uploader:</strong> {getMetadata(maintenanceImage, "Maintenance").uploader}</p>
+            </div>
           </div>
         </div>
 
-        <div style={{ marginTop: "20px" }}>
-          <button onClick={handleSave} style={{ marginRight: "10px" }}>Save</button>
-          <button onClick={onClose}>Close</button>
+        {/* Save / Close Buttons */}
+        <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <button onClick={handleSave} style={{ padding: "8px 15px", backgroundColor: "#007bff", color: "white", border: "none", borderRadius: "5px" }}>Save</button>
+          <button onClick={onClose} style={{ padding: "8px 15px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: "5px" }}>Close</button>
         </div>
       </div>
     </div>

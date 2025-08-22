@@ -26,13 +26,13 @@ button {
 
 /* === APP LAYOUT === */
 .app {
-  display: flex;            /* sidebar + content side by side */
-  height: 100vh;            /* full viewport height */
+  display: flex;            
+  height: 100vh;            
   width: 100%;
 }
 
 .sidebar {
-  width: 220px;             /* fixed width */
+  width: 220px;             
   background-color: #02090fff;
   color: white;
   padding: 20px;
@@ -46,16 +46,16 @@ button {
 .sidebar-logo {
   display: flex;
   flex-direction: column;
-  align-items: center;   /* horizontal center */
-  justify-content: center; /* vertical center if needed */
-  margin-bottom: 20px;   /* space below logo */
+  align-items: center;   
+  justify-content: center; 
+  margin-bottom: 20px;   
 }
 
 .sidebar-logo img {
   width: 100px;
   height: 100px;
   object-fit: cover;
-  border-radius: 50%;    /* optional: makes it circular */
+  border-radius: 50%;    
 }
 
 .sidebar-logo h2 {
@@ -76,9 +76,9 @@ button {
 .sidebar button {
   padding: 14px 30px;       
   font-size: 18px;           
-  font-weight: 600;           /* medium-bold, closer to h2/h1 */
-  font-family: 'Arial', sans-serif;  /* same as sidebar logo */
-  letter-spacing: 0.5px;      /* optional: slightly spaced letters */
+  font-weight: 600;           
+  font-family: 'Arial', sans-serif;  
+  letter-spacing: 0.5px;      
   background-color: #1a1a2e; 
   color: white;
   border: none;
@@ -90,7 +90,7 @@ button {
 
 /* Hover effect */
 .sidebar button:hover {
-  background-color: #2b95dbff; /* highlight color */
+  background-color: #2b95dbff; 
   transform: translateY(-2px);
 }
 
@@ -100,10 +100,8 @@ button {
   color: #fff;
 }
 
-
-
 .content {
-  flex-grow: 1;             /* take remaining width */
+  flex-grow: 1;             
   padding: 20px;
   overflow-y: auto;
 }
@@ -157,28 +155,99 @@ button {
   gap: 8px;
 }
 
+/* Transformer Action Buttons */
+.transformer-actions button {
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  color: white;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.transformer-actions .view-btn {
+  background-color: #28a745;
+}
+
+.transformer-actions .view-btn:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+}
+
+.transformer-actions .edit-btn {
+  background-color: #074b94;
+}
+
+.transformer-actions .edit-btn:hover {
+  background-color: #0069d9;
+  transform: translateY(-1px);
+}
+
+.transformer-actions .delete-btn {
+  background-color: #d9534f;
+}
+
+.transformer-actions .delete-btn:hover {
+  background-color: #c9302c;
+  transform: translateY(-1px);
+}
+
+/* === SELECTED TRANSFORMER CARD (BALANCED) === */
 .selected-transformer {
   padding: 15px;
   margin-bottom: 20px;
-  background: #e8f4fc;
-  border: 1px solid #2b95dbff;
+  background: #f0f8ff; /* light blue background */
+  border: 2px solid #2b95dbff; /* accent color */
   border-radius: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .selected-transformer .selected-info {
   display: flex;
-  gap: 15px;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selected-transformer .info-card {
+  background-color: white;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  min-width: 130px;
+  text-align: left;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .selected-transformer img {
-  width: 120px;
-  height: 120px;
+  width: 300px;
+  height: 300px;
   border-radius: 8px;
   object-fit: cover;
+  border: 1px solid #ccc;
 }
+
+.selected-transformer button.danger-btn {
+  align-self: start;
+  padding: 6px 12px;
+  background-color: #d9534f;
+  color: white;
+  border-radius: 5px;
+  font-weight: 600;
+  border: none;
+  transition: background 0.3s, transform 0.2s;
+}
+
+.selected-transformer button.danger-btn:hover {
+  background-color: #c9302c;
+  transform: translateY(-1px);
+}
+
 
 /* === INSPECTION LIST === */
 .schedule-btn {
