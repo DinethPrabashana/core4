@@ -12,12 +12,7 @@ function App() {
   const [activePage, setActivePage] = useState("page1");
   const [activeTab, setActiveTab] = useState("details");
 
-  // Load transformers from localStorage at initialization
-  const [transformers, setTransformers] = useState(() => {
-    const saved = localStorage.getItem("transformers");
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [transformers, setTransformers] = useState([]);
   const [filteredTransformers, setFilteredTransformers] = useState([]);
   const [selectedTransformer, setSelectedTransformer] = useState(null);
   const [showTransformerModal, setShowTransformerModal] = useState(false);
@@ -29,7 +24,7 @@ function App() {
     type: "Bulk",
     baselineImage: null,
     weather: "",
-    location: "", 
+    location: "",
   });
   const [searchFieldDetails, setSearchFieldDetails] = useState("number");
   const [searchQueryDetails, setSearchQueryDetails] = useState("");
@@ -65,10 +60,9 @@ function App() {
       inspections.filter((i) => {
         if (!searchQueryInspection) return true;
 
-        // Special handling for transformer field
         const value =
           searchFieldInspection === "transformer"
-            ? transformers.find(t => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
+            ? transformers.find((t) => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
             : i[searchFieldInspection]?.toString().toLowerCase() || "";
 
         return value.includes(searchQueryInspection.toLowerCase());
@@ -83,19 +77,28 @@ function App() {
     if (name === "baselineImage" && files?.[0]) {
       const file = files[0];
       const reader = new FileReader();
-
-      // Convert image to Base64
       reader.onloadend = () => {
-        setTransformerForm({ ...transformerForm, baselineImage: reader.result }); // Base64 string
+        setTransformerForm({ ...transformerForm, baselineImage: reader.result });
       };
-
-      reader.readAsDataURL(file); // Start conversion
+      reader.readAsDataURL(file);
     } else {
       setTransformerForm({ ...transformerForm, [name]: value });
     }
   };
 
-  // Save transformers to localStorage whenever they change
+  // Load transformers from localStorage first
+  useEffect(() => {
+    const saved = localStorage.getItem("transformers");
+    if (saved) {
+      try {
+        setTransformers(JSON.parse(saved));
+      } catch {
+        setTransformers([]);
+      }
+    }
+  }, []);
+
+  // Save transformers to localStorage
   useEffect(() => {
     localStorage.setItem("transformers", JSON.stringify(transformers));
   }, [transformers]);
@@ -122,7 +125,7 @@ function App() {
         region: t.region,
         type: t.type,
         baselineImage: t.baselineImage || null,
-        weather: t.weather || "", 
+        weather: t.weather || "",
         location: t.location || "",
       });
     } else {
@@ -134,7 +137,7 @@ function App() {
         type: "Bulk",
         baselineImage: null,
         weather: "",
-        location: "", 
+        location: "",
       });
     }
     setShowTransformerModal(true);
@@ -146,7 +149,15 @@ function App() {
     setInspectionForm({ ...inspectionForm, [name]: value });
   };
 
-  const handleScheduleInspection = () => {
+  const fileToBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+  const handleScheduleInspection = async () => {
     const transformerId = parseInt(inspectionForm.transformer, 10);
     const selectedTransformer = transformers.find((t) => t.id === transformerId);
 
@@ -156,10 +167,10 @@ function App() {
       id: Date.now(),
       baselineImage: selectedTransformer?.baselineImage || null,
       maintenanceImage: null,
-      weather: selectedTransformer?.weather || "", // copy weather here
+      weather: selectedTransformer?.weather || "",
     };
 
-    setInspections([...inspections, newInspection]);
+    setInspections((prev) => [...prev, newInspection]);
     setShowAddInspectionModal(false);
     setInspectionForm({ transformer: "", date: "", inspector: "", notes: "" });
   };
@@ -169,10 +180,44 @@ function App() {
     setShowViewInspectionModal(true);
   };
 
-  // Update inspection with maintenance image or weather
   const handleUpdateInspection = (updatedInspection) => {
-    setInspections(inspections.map((i) => (i.id === updatedInspection.id ? updatedInspection : i)));
+    setInspections((prev) =>
+      prev.map((i) => (i.id === updatedInspection.id ? updatedInspection : i))
+    );
   };
+
+  // Load inspections from localStorage after transformers are loaded
+  useEffect(() => {
+    const saved = localStorage.getItem("inspections");
+    if (saved) {
+      try {
+        setInspections(JSON.parse(saved));
+      } catch {
+        setInspections([]);
+      }
+    }
+  }, [transformers.length]);
+
+  // Save inspections
+  useEffect(() => {
+    const convertFilesToBase64 = async () => {
+      const inspectionsBase64 = await Promise.all(
+        inspections.map(async (i) => {
+          const baseline =
+            i.baselineImage instanceof File
+              ? await fileToBase64(i.baselineImage)
+              : i.baselineImage;
+          const maintenance =
+            i.maintenanceImage instanceof File
+              ? await fileToBase64(i.maintenanceImage)
+              : i.maintenanceImage;
+          return { ...i, baselineImage: baseline, maintenanceImage: maintenance };
+        })
+      );
+      localStorage.setItem("inspections", JSON.stringify(inspectionsBase64));
+    };
+    convertFilesToBase64();
+  }, [inspections]);
 
   return (
     <div className="app">
@@ -202,7 +247,7 @@ function App() {
               <InspectionList
                 filteredInspections={filteredInspections}
                 transformers={transformers}
-                setInspections={setInspections} 
+                setInspections={setInspections}
                 setFilteredInspections={setFilteredInspections}
                 searchFieldInspection={searchFieldInspection}
                 setSearchFieldInspection={setSearchFieldInspection}
@@ -242,7 +287,7 @@ function App() {
           inspection={viewInspectionData}
           transformers={transformers}
           onClose={() => setShowViewInspectionModal(false)}
-          updateInspection={handleUpdateInspection} // pass the update function
+          updateInspection={handleUpdateInspection}
         />
       )}
     </div>
