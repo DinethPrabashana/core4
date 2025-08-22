@@ -24,6 +24,7 @@ function App() {
     type: "Bulk",
     baselineImage: null,
     weather: "",
+    location: "", 
   });
   const [searchFieldDetails, setSearchFieldDetails] = useState("number");
   const [searchQueryDetails, setSearchQueryDetails] = useState("");
@@ -103,6 +104,7 @@ function App() {
         type: t.type,
         baselineImage: t.baselineImage || null,
         weather: t.weather || "", 
+        location: t.location || "",
       });
     } else {
       setTransformerForm({
@@ -113,6 +115,7 @@ function App() {
         type: "Bulk",
         baselineImage: null,
         weather: "",
+        location: "", 
       });
     }
     setShowTransformerModal(true);

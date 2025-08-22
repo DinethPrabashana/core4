@@ -11,7 +11,7 @@ export default function TransformerModal({
   return (
     <div className="modal">
       <div className="modal-content">
-        <h2>Add / Edit Transformer</h2>
+        <h2>Add Transformer</h2>
 
         <label>Transformer Number</label>
         <input
@@ -57,6 +57,17 @@ export default function TransformerModal({
           <option value="Rainy">Rainy</option>
           <option value="Cloudy">Cloudy</option>
         </select>
+
+        <label>
+          Location
+        </label>
+        <input
+          type="text"
+          name="location"
+          placeholder="Enter transformer location"
+          value={formData.location || ""}
+          onChange={handleInputChange}
+        />
 
         <div className="modal-buttons">
           <button className="cancel-btn" onClick={onClose}>
