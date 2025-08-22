@@ -12,7 +12,12 @@ function App() {
   const [activePage, setActivePage] = useState("page1");
   const [activeTab, setActiveTab] = useState("details");
 
-  const [transformers, setTransformers] = useState([]);
+  // Load transformers from localStorage at initialization
+  const [transformers, setTransformers] = useState(() => {
+    const saved = localStorage.getItem("transformers");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [filteredTransformers, setFilteredTransformers] = useState([]);
   const [selectedTransformer, setSelectedTransformer] = useState(null);
   const [showTransformerModal, setShowTransformerModal] = useState(false);
@@ -55,31 +60,45 @@ function App() {
   }, [searchQueryDetails, searchFieldDetails, transformers]);
 
   // Filtering Inspections
- useEffect(() => {
-  setFilteredInspections(
-    inspections.filter((i) => {
-      if (!searchQueryInspection) return true;
+  useEffect(() => {
+    setFilteredInspections(
+      inspections.filter((i) => {
+        if (!searchQueryInspection) return true;
 
-      // Special handling for transformer field
-      const value =
-        searchFieldInspection === "transformer"
-          ? transformers.find(t => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
-          : i[searchFieldInspection]?.toString().toLowerCase() || "";
+        // Special handling for transformer field
+        const value =
+          searchFieldInspection === "transformer"
+            ? transformers.find(t => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
+            : i[searchFieldInspection]?.toString().toLowerCase() || "";
 
-      return value.includes(searchQueryInspection.toLowerCase());
-    })
-  );
-}, [searchQueryInspection, searchFieldInspection, inspections, transformers]);
+        return value.includes(searchQueryInspection.toLowerCase());
+      })
+    );
+  }, [searchQueryInspection, searchFieldInspection, inspections, transformers]);
 
   // Transformer handlers
   const handleTransformerChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === "baselineImage" && files) {
-      setTransformerForm({ ...transformerForm, baselineImage: files[0] });
+
+    if (name === "baselineImage" && files?.[0]) {
+      const file = files[0];
+      const reader = new FileReader();
+
+      // Convert image to Base64
+      reader.onloadend = () => {
+        setTransformerForm({ ...transformerForm, baselineImage: reader.result }); // Base64 string
+      };
+
+      reader.readAsDataURL(file); // Start conversion
     } else {
       setTransformerForm({ ...transformerForm, [name]: value });
     }
   };
+
+  // Save transformers to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("transformers", JSON.stringify(transformers));
+  }, [transformers]);
 
   const handleAddTransformer = () => {
     const t = {
