@@ -1,7 +1,10 @@
 import React from "react";
+import "../App.css";
 
 export default function InspectionList({
   filteredInspections = [],
+  setFilteredInspections,
+  setInspections,
   transformers = [],
   searchFieldInspection,
   setSearchFieldInspection,
@@ -10,6 +13,15 @@ export default function InspectionList({
   openAddInspectionModal,
   openViewInspectionModal,
 }) {
+
+    const handleDeleteInspection = (inspectionId) => {
+      // Remove from main inspections state
+      setInspections(prev => prev.filter(i => i.id !== inspectionId));
+
+      // Also update filteredInspections to keep table in sync
+      setFilteredInspections(prev => prev.filter(i => i.id !== inspectionId));
+    };
+
   return (
     <div style={{ flexGrow: 1, padding: "20px" }}>
       <h1>Inspection Page</h1>
@@ -46,7 +58,9 @@ export default function InspectionList({
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Date</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Inspector</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Notes</th>
+            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Status</th> {/* New Column */}
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Actions</th>
+            
           </tr>
         </thead>
         <tbody>
@@ -61,17 +75,28 @@ export default function InspectionList({
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>{inspection.inspector}</td>
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>{inspection.notes}</td>
                 <td style={{ border: "1px solid #ddd", padding: "10px" }}>
+                  <span className={"status-pending"}>
+                    {inspection.status || "Pending"}
+                  </span>
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "10px" }}>
                   <button
-                    style={{ padding: "5px 10px" }}
+                    className="inspection-btn view-btn"
                     onClick={() => openViewInspectionModal(inspection)}
                   >
                     View
+                  </button>
+                  <button
+                    className="inspection-btn delete-btn"
+                    onClick={() => handleDeleteInspection(inspection.id)}
+                  >
+                  Delete
                   </button>
                 </td>
               </tr>
             );
           })}
-        </tbody>
+      </tbody>
       </table>
     </div>
   );

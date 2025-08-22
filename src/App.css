@@ -52,25 +52,34 @@ button {
 }
 
 .sidebar-logo img {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   object-fit: cover;
   border-radius: 50%;    
-}
-
-.sidebar-logo h2 {
-  margin-top: 10px;
-  color: white;
-  font-size: 20px;
-  text-align: center;
-}
-
-.sidebar-logo img {
-  width: 100px;
-  height: 100px;
   margin-bottom: 5px;
   object-fit: cover;
 }
+
+.sidebar-logo h2 {
+  margin-top: 15px;
+  font-size: 32px;
+  text-align: center;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 5px 0;
+
+  /* Gradient text */
+  background: linear-gradient(to right, rgb(0, 4, 250), #ffffff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+
+  /* Optional subtle shadow for depth */
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+
+  transition: all 0.3s ease;
+}
+
+
 
 /* Sidebar buttons styling */
 .sidebar button {
@@ -168,30 +177,27 @@ button {
 }
 
 .transformer-actions .view-btn {
-  background-color: #28a745;
+  background-color: black;
 }
 
 .transformer-actions .view-btn:hover {
-  background-color: #218838;
-  transform: translateY(-1px);
+  background-color: rgb(0, 4, 250);
 }
 
 .transformer-actions .edit-btn {
-  background-color: #074b94;
+  background-color: black;
 }
 
 .transformer-actions .edit-btn:hover {
-  background-color: #0069d9;
-  transform: translateY(-1px);
+  background-color: rgb(0, 4, 250);
 }
 
 .transformer-actions .delete-btn {
-  background-color: #d9534f;
+  background-color: black;
 }
 
 .transformer-actions .delete-btn:hover {
-  background-color: #c9302c;
-  transform: translateY(-1px);
+  background-color: rgb(0, 4, 250);
 }
 
 /* === SELECTED TRANSFORMER CARD (BALANCED) === */
@@ -466,4 +472,65 @@ button {
 
 .inspection-cancel-btn:hover {
   background-color: #5a6268; /* darker gray on hover */
+}
+
+/* pending colum style*/
+
+.status-pending {
+  color: white;
+  background-color: rgb(211, 108, 108);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.status-in-progress {
+  color: white;
+  background-color: orange;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.status-completed {
+  color: white;
+  background-color: green;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/*inspection table buttons style*/
+
+.inspection-btn {
+  padding: 5px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-right: 5px;
+  transition: all 0.2s ease;
+}
+
+/* View button - blue */
+.view-btn {
+  background-color: black;
+  color: white;
+}
+
+.view-btn:hover {
+  background-color: rgb(0, 4, 250);
+}
+
+/* Delete button - red */
+.delete-btn {
+  background-color: black;
+  color: white;
+}
+
+.delete-btn:hover {
+  background-color: rgb(0, 4, 250);
 }

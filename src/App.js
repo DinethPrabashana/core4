@@ -54,15 +54,21 @@ function App() {
   }, [searchQueryDetails, searchFieldDetails, transformers]);
 
   // Filtering Inspections
-  useEffect(() => {
-    setFilteredInspections(
-      inspections.filter((i) => {
-        if (!searchQueryInspection) return true;
-        const value = i[searchFieldInspection]?.toString().toLowerCase() || "";
-        return value.includes(searchQueryInspection.toLowerCase());
-      })
-    );
-  }, [searchQueryInspection, searchFieldInspection, inspections]);
+ useEffect(() => {
+  setFilteredInspections(
+    inspections.filter((i) => {
+      if (!searchQueryInspection) return true;
+
+      // Special handling for transformer field
+      const value =
+        searchFieldInspection === "transformer"
+          ? transformers.find(t => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
+          : i[searchFieldInspection]?.toString().toLowerCase() || "";
+
+      return value.includes(searchQueryInspection.toLowerCase());
+    })
+  );
+}, [searchQueryInspection, searchFieldInspection, inspections, transformers]);
 
   // Transformer handlers
   const handleTransformerChange = (e) => {
@@ -174,6 +180,8 @@ function App() {
               <InspectionList
                 filteredInspections={filteredInspections}
                 transformers={transformers}
+                setInspections={setInspections} 
+                setFilteredInspections={setFilteredInspections}
                 searchFieldInspection={searchFieldInspection}
                 setSearchFieldInspection={setSearchFieldInspection}
                 searchQueryInspection={searchQueryInspection}

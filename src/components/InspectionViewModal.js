@@ -8,9 +8,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
 
   // Independent weather for each image
-const [baselineWeather, setBaselineWeather] = useState(
-  inspection.baselineWeather ?? transformer?.weather ?? ""
-);
+  const [baselineWeather, setBaselineWeather] = useState(
+    inspection.baselineWeather ?? transformer?.weather ?? ""
+  );
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "");
 
   // Independent upload dates for each image
@@ -94,41 +94,64 @@ const [baselineWeather, setBaselineWeather] = useState(
       }}>
         <h1 style={{ textAlign: "center", marginBottom: "20px" }}>Thermal Image</h1>
 
-        {/* Transformer Info */}
-        <div style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          padding: "15px",
-          backgroundColor: "#f9f9f9",
-          display: "flex",
-          flexDirection: "column",
-          gap: "5px"
-        }}>
-          <h3>Transformer Info</h3>
-          <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
-          <p><strong>Pole:</strong> {transformer?.pole || "N/A"}</p>
-          <p><strong>Region:</strong> {transformer?.region || "N/A"}</p>
-          <p><strong>Type:</strong> {transformer?.type || "N/A"}</p>
+        {/* Transformer Info + Workflow Progress Side by Side */}
+        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+          {/* Transformer Info */}
+          <div
+            style={{
+              flex: 1,
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              padding: "15px",
+              backgroundColor: "#f9f9f9",
+              display: "flex",
+              flexDirection: "column",
+              gap: "5px"
+            }}
+          >
+            <h3>Transformer Info</h3>
+            <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
+            <p><strong>Pole:</strong> {transformer?.pole || "N/A"}</p>
+            <p><strong>Region:</strong> {transformer?.region || "N/A"}</p>
+            <p><strong>Type:</strong> {transformer?.type || "N/A"}</p>
+            <p><strong>Inspector:</strong> {inspection.inspector || "N/A"}</p>
+            <p><strong>Inspection Date:</strong> {inspection.date || "N/A"}</p>
+          </div>
+
+          {/* Workflow Progress */}
+          <div
+            style={{
+              flex: 1,
+              border: "1px solid #ccc",
+              borderRadius: "8px",
+              padding: "15px",
+              backgroundColor: "#f5f5f5",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px"
+            }}
+          >
+            <h3 style={{ margin: "0 0 10px 0" }}>Workflow Progress (Inactive)</h3>
+            {["Thermal Image Upload", "AI Analysis", "Thermal Image Review"].map((step) => (
+              <div key={step}>
+                <p style={{ margin: "2px 0" }}>• {step}</p>
+                <div
+                  style={{
+                    width: "100%",
+                    height: "10px",
+                    background: "#e0e0e0",
+                    borderRadius: "5px"
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Workflow Steps Box */}
-        <div style={{
-          border: "1px solid #ccc",
-          borderRadius: "8px",
-          padding: "15px",
-          backgroundColor: "#f5f5f5",
-          display: "flex",
-          flexDirection: "column",
-          gap: "10px"
-        }}>
-          <h3 style={{ margin: "0 0 10px 0" }}>Workflow Progress (Inactive)</h3>
-          {["Thermal Image Upload", "AI Analysis", "Thermal Image Review"].map((step) => (
-            <div key={step}>
-              <p style={{ margin: "2px 0" }}>• {step}</p>
-              <div style={{ width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px" }} />
-            </div>
-          ))}
-        </div>
+        {/* Thermal Image Comparison Title */}
+        <h2 style={{ textAlign: "center", marginTop: "20px", marginBottom: "10px" }}>
+        Thermal Image Comparison
+        </h2>
 
         {/* Images Side by Side */}
         <div style={{ display: "flex", gap: "20px", flexWrap: "wrap", marginTop: "10px" }}>
