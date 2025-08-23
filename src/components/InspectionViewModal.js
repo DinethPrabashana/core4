@@ -21,17 +21,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
   const [baselineImageURL, setBaselineImageURL] = useState(null);
   useEffect(() => {
-    if (!baselineImage) {
-      setBaselineImageURL(null);
-      return;
-    }
+    if (!baselineImage) { setBaselineImageURL(null); return; }
     if (baselineImage instanceof File || baselineImage instanceof Blob) {
       const url = URL.createObjectURL(baselineImage);
       setBaselineImageURL(url);
       return () => URL.revokeObjectURL(url);
-    } else {
-      setBaselineImageURL(baselineImage);
-    }
+    } else { setBaselineImageURL(baselineImage); }
   }, [baselineImage]);
 
   // --- Maintenance Image ---
@@ -43,24 +38,19 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   useEffect(() => {
     if (!localMaintenanceChanged && transformer?.maintenanceImage) {
       setMaintenanceImage(transformer.maintenanceImage);
-      setMaintenanceWeather(transformer.maintenanceWeather || "Sunny");
+      setMaintenanceWeather(transformer?.maintenanceWeather || "Sunny");
       setMaintenanceUploadDate(transformer?.maintenanceUploadDate || null);
     }
   }, [transformer, localMaintenanceChanged]);
 
   const [maintenanceImageURL, setMaintenanceImageURL] = useState(null);
   useEffect(() => {
-    if (!maintenanceImage) {
-      setMaintenanceImageURL(null);
-      return;
-    }
+    if (!maintenanceImage) { setMaintenanceImageURL(null); return; }
     if (maintenanceImage instanceof File || maintenanceImage instanceof Blob) {
       const url = URL.createObjectURL(maintenanceImage);
       setMaintenanceImageURL(url);
       return () => URL.revokeObjectURL(url);
-    } else {
-      setMaintenanceImageURL(maintenanceImage);
-    }
+    } else { setMaintenanceImageURL(maintenanceImage); }
   }, [maintenanceImage]);
 
   const [showBaselinePreview, setShowBaselinePreview] = useState(false);
@@ -73,8 +63,11 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     review: "Pending",
   });
 
+  // Initialize progressStatus from inspection prop to persist
   useEffect(() => {
-    if (maintenanceImage) {
+    if (inspection.progressStatus) {
+      setProgressStatus(inspection.progressStatus);
+    } else if (maintenanceImage) {
       setProgressStatus({
         thermalUpload: "Completed",
         aiAnalysis: "In Progress",
@@ -87,15 +80,24 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         review: "Pending",
       });
     }
-  }, [maintenanceImage]);
+  }, [inspection, maintenanceImage]);
+
+  // --- Complete button handler ---
+  const handleComplete = () => {
+    setProgressStatus(prev => ({
+      ...prev,
+      aiAnalysis: "Completed",
+      review: "Completed",
+    }));
+  };
 
   const renderStep = (label, state) => {
     const color = state === "Completed" ? "green" : state === "In Progress" ? "orange" : "grey";
     return (
       <div className="progress-step">
         <div className="progress-circle" style={{ backgroundColor: color }}></div>
-        <span className="progress-label">{label}</span>
-        <span className="progress-status">{state}</span>
+        <span className="progress-label"><strong>{label}</strong></span>
+        <span className="progress-status"><strong>{state}</strong></span>
       </div>
     );
   };
@@ -110,7 +112,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         setBaselineImage(reader.result);
         setBaselineUploadDate(now);
         setLocalBaselineChanged(true);
-
         if (updateTransformer && transformer) {
           updateTransformer({
             ...transformer,
@@ -129,7 +130,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     setBaselineUploadDate(null);
     setBaselineWeather("Sunny");
     setLocalBaselineChanged(false);
-
     if (updateTransformer && transformer) {
       updateTransformer({
         ...transformer,
@@ -163,6 +163,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceImage,
         maintenanceWeather,
         maintenanceUploadDate,
+        progressStatus, // <-- save progressStatus to persist
       });
     }
     onClose();
@@ -208,7 +209,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 </select>
               </label>
             </div>
-
             {baselineImageURL ? (
               <div className="image-actions">
                 <span>🖼️ Baseline Image uploaded</span>
@@ -260,6 +260,11 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                   <p><strong>Image Type:</strong> Maintenance</p>
                 </div>
               </div>
+            </div>
+
+            {/* Complete button */}
+            <div className="complete-button-container">
+              <button className="inspection-complete-btn" onClick={handleComplete}>Complete</button>
             </div>
           </div>
         )}
