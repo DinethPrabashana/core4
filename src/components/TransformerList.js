@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import placeholderImage from "../assets/transformer.jpg";
-import "../style/TransformerList.css"
+import "../style/TransformerList.css";
 
 export default function TransformerList({
   filteredTransformers = [],
@@ -44,9 +44,8 @@ export default function TransformerList({
   };
 
   return (
-    <div className="transformer-container" style={{ padding: "20px" }}>
-      {/* Page Title */}
-      <h1 style={{ textAlign: "left", marginBottom: "20px" }}>Transformer Page</h1>
+    <div className="transformer-container">
+      <h1 className="page-title">Transformer Page</h1>
 
       <button className="add-transformer-btn" onClick={() => setShowModal()}>
         + Add Transformer
@@ -75,18 +74,9 @@ export default function TransformerList({
 
       {/* Selected Transformer */}
       {selectedTransformer && (
-        <div
-          className="selected-transformer"
-          style={{
-            display: "flex",
-            flexDirection: "row",
-            alignItems: "flex-start",
-            gap: "20px",
-            padding: "15px",
-          }}
-        >
+        <div className="selected-transformer">
           {/* Transformer Info */}
-          <div className="selected-info" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div className="selected-info">
             {["number", "pole", "region", "type"].map((field) => (
               <div key={field} className="info-card">
                 <strong>{field.charAt(0).toUpperCase() + field.slice(1)}:</strong>
@@ -100,19 +90,9 @@ export default function TransformerList({
           </div>
 
           {/* Image Section */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
-            <strong style={{ fontSize: "16px", marginBottom: "5px" }}>Baseline Image</strong>
-            <img
-              src={imageURL || placeholderImage}
-              alt="Transformer"
-              style={{
-                width: "300px",
-                height: "300px",
-                objectFit: "cover",
-                border: "1px solid #ccc",
-                borderRadius: "8px",
-              }}
-            />
+          <div className="selected-image-container">
+            <strong className="image-title">Baseline Image</strong>
+            <img src={imageURL || placeholderImage} alt="Transformer" className="selected-image" />
           </div>
         </div>
       )}
@@ -120,7 +100,7 @@ export default function TransformerList({
       {/* Transformer Table */}
       <table className="transformer-table">
         <thead>
-          <tr style={{ backgroundColor: "#000", color: "#fff" }}>
+          <tr className="table-header">
             <th>Transformer #</th>
             <th>Pole #</th>
             <th>Region</th>

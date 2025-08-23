@@ -7,7 +7,6 @@ import InspectionList from "./components/InspectionList";
 import InspectionModal from "./components/InspectionModal";
 import InspectionViewModal from "./components/InspectionViewModal";
 
-// Import default images
 import t1 from "./assets/transformer1.png";
 import t2 from "./assets/transformer2.png";
 import t3 from "./assets/transformer3.png";
@@ -30,6 +29,7 @@ function App() {
     region: "",
     type: "Bulk",
     baselineImage: null,
+    baselineUploadDate: null,
     weather: "",
     location: "",
   });
@@ -46,7 +46,9 @@ function App() {
     date: "",
     inspector: "",
     notes: "",
-    maintenanceImage: null, // Add maintenanceImage field
+    maintenanceImage: null,
+    maintenanceUploadDate: null,
+    maintenanceWeather: "Sunny",
   });
   const [searchFieldInspection, setSearchFieldInspection] = useState("");
   const [searchQueryInspection, setSearchQueryInspection] = useState("");
@@ -67,10 +69,10 @@ function App() {
 
   const setDefaultTransformers = () => {
     const defaultTransformers = [
-      { id: 1, number: "TX-001", pole: "A1", region: "North", type: "Bulk", baselineImage: t1, weather: "Sunny", location: "Site 1" },
-      { id: 2, number: "TX-002", pole: "A2", region: "South", type: "Distribution", baselineImage: t2, weather: "Cloudy", location: "Site 2" },
-      { id: 3, number: "TX-003", pole: "B1", region: "East", type: "Bulk", baselineImage: t3, weather: "Rainy", location: "Site 3" },
-      { id: 4, number: "TX-004", pole: "B2", region: "West", type: "Distribution", baselineImage: t4, weather: "Sunny", location: "Site 4" },
+      { id: 1, number: "TX-001", pole: "A1", region: "North", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
+      { id: 2, number: "TX-002", pole: "A2", region: "South", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
+      { id: 3, number: "TX-003", pole: "B1", region: "East", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
+      { id: 4, number: "TX-004", pole: "B2", region: "West", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
     ];
     setTransformers(defaultTransformers);
     localStorage.setItem("transformers", JSON.stringify(defaultTransformers));
@@ -88,12 +90,11 @@ function App() {
     }
   }, []);
 
-  // Save transformers whenever they change
+  // --- Save to localStorage ---
   useEffect(() => {
     localStorage.setItem("transformers", JSON.stringify(transformers));
   }, [transformers]);
 
-  // Save inspections whenever they change
   useEffect(() => {
     localStorage.setItem("inspections", JSON.stringify(inspections));
   }, [inspections]);
@@ -127,7 +128,11 @@ function App() {
     const { name, value, files } = e.target;
     if (name === "baselineImage" && files?.[0]) {
       const reader = new FileReader();
-      reader.onloadend = () => setTransformerForm({ ...transformerForm, baselineImage: reader.result });
+      reader.onloadend = () => setTransformerForm({
+        ...transformerForm,
+        baselineImage: reader.result,
+        baselineUploadDate: new Date().toLocaleString(),
+      });
       reader.readAsDataURL(files[0]);
     } else {
       setTransformerForm({ ...transformerForm, [name]: value });
@@ -143,6 +148,7 @@ function App() {
         region: t.region,
         type: t.type,
         baselineImage: t.baselineImage || null,
+        baselineUploadDate: t.baselineUploadDate || null,
         weather: t.weather || "",
         location: t.location || "",
       });
@@ -154,6 +160,7 @@ function App() {
         region: "",
         type: "Bulk",
         baselineImage: null,
+        baselineUploadDate: null,
         weather: "",
         location: "",
       });
@@ -162,12 +169,14 @@ function App() {
   };
 
   const handleAddTransformer = () => {
-    const t = { ...transformerForm, id: transformerForm.id || Date.now() };
+    const t = {
+      ...transformerForm,
+      id: transformerForm.id || Date.now(),
+    };
     setTransformers(prev => {
       const updated = prev.some(item => item.id === t.id)
         ? prev.map(item => (item.id === t.id ? t : item))
         : [...prev, t];
-      localStorage.setItem("transformers", JSON.stringify(updated));
       return updated;
     });
     setShowTransformerModal(false);
@@ -175,33 +184,33 @@ function App() {
 
   // --- Inspection handlers ---
   const handleInspectionChange = (e) => {
-    const { name, value, files } = e.target;
-    if (name === "maintenanceImage" && files?.[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => setInspectionForm({ ...inspectionForm, maintenanceImage: reader.result });
-      reader.readAsDataURL(files[0]);
-    } else {
-      setInspectionForm({ ...inspectionForm, [name]: value });
-    }
+    const { name, value } = e.target;
+    setInspectionForm({ ...inspectionForm, [name]: value });
   };
 
   const handleScheduleInspection = () => {
     const transformerId = parseInt(inspectionForm.transformer, 10);
-    const selectedTransformer = transformers.find(t => t.id === transformerId);
 
     const newInspection = {
       ...inspectionForm,
       transformer: transformerId,
       id: Date.now(),
-      baselineImage: selectedTransformer?.baselineImage || null,
-      maintenanceImage: inspectionForm.maintenanceImage || null, // <-- save base64
-      baselineWeather: selectedTransformer?.weather || "Sunny",
+      maintenanceImage: null,
+      maintenanceUploadDate: null,
       maintenanceWeather: "Sunny",
     };
 
     setInspections(prev => [...prev, newInspection]);
     setShowAddInspectionModal(false);
-    setInspectionForm({ transformer: "", date: "", inspector: "", notes: "", maintenanceImage: null });
+    setInspectionForm({
+      transformer: "",
+      date: "",
+      inspector: "",
+      notes: "",
+      maintenanceImage: null,
+      maintenanceUploadDate: null,
+      maintenanceWeather: "Sunny",
+    });
   };
 
   const handleViewInspection = (inspection) => {
@@ -213,7 +222,13 @@ function App() {
     setInspections(inspections.map(i => (i.id === updatedInspection.id ? updatedInspection : i)));
   };
 
-  // --- Render ---
+  // --- Update transformer from inspection view ---
+  const handleUpdateTransformer = (updatedTransformer) => {
+    setTransformers(prev =>
+      prev.map(t => (t.id === updatedTransformer.id ? updatedTransformer : t))
+    );
+  };
+
   return (
     <div className="app">
       <Sidebar setActivePage={setActivePage} />
@@ -279,6 +294,7 @@ function App() {
           transformers={transformers}
           onClose={() => setShowViewInspectionModal(false)}
           updateInspection={handleUpdateInspection}
+          updateTransformer={handleUpdateTransformer} // <-- important
         />
       )}
     </div>
