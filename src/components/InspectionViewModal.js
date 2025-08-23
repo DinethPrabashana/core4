@@ -136,11 +136,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           {/* Thermal */}
           <div className="modal-section">
             <h3>Thermal Image</h3>
-            <div className="weather-select">
-              <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} className="file-input" />
-              <label htmlFor="maintenanceUpload" className="upload-btn blue-btn">Upload Thermal Image</label>
+            <div className="upload-weather-container">
+              <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} style={{ display: "none" }} />
+              <label htmlFor="maintenanceUpload" className="upload-btn">Upload Thermal Image</label>
+
               <label>
-                Weather:{" "}
+                Weather:
                 <select value={maintenanceWeather} onChange={e => setMaintenanceWeather(e.target.value)}>
                   {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>

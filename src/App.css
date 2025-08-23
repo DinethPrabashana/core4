@@ -537,7 +537,6 @@ button {
 
 
 /* inspection view popup main styling */
-/* Modal flex layouts */
 .modal-flex {
   display: flex;
   gap: 20px;
@@ -557,7 +556,6 @@ button {
   background-color: #f5f5f5;
 }
 
-/* Workflow */
 .workflow-step {
   margin-bottom: 5px;
 }
@@ -569,7 +567,6 @@ button {
   border-radius: 5px;
 }
 
-/* Comparison images */
 .comparison-flex {
   display: flex;
   justify-content: center;
@@ -606,7 +603,6 @@ button {
   margin: 8px auto 0;
 }
 
-/* Upload buttons */
 .file-input {
   display: none;
 }
@@ -623,7 +619,6 @@ button {
   background-color: #007bff;
 }
 
-/* Preview */
 .preview-card {
   max-width: 80%;
   max-height: 80%;
@@ -638,17 +633,14 @@ button {
   object-fit: contain;
 }
 
-/* Center text */
 .center-text {
   text-align: center;
 }
 
-/* Weather select */
 .weather-select {
   margin-bottom: 10px;
 }
 
-/* Image actions */
 .image-actions {
   display: flex;
   align-items: center;
@@ -657,7 +649,7 @@ button {
 
 .modal-overlay {
   position: fixed;
-  inset: 0; /* top:0; right:0; bottom:0; left:0 */
+  inset: 0; 
   background: rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
@@ -665,7 +657,6 @@ button {
   z-index: 9999;
 }
 
-/* Modal card styling */
 .modal-card {
   background: white;
   padding: 30px;
@@ -678,4 +669,31 @@ button {
   flex-direction: column;
   gap: 20px;
   z-index: 10000;
+}
+
+.upload-weather-container {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* space between upload button and dropdown */
+  margin-bottom: 10px;
+}
+
+.upload-weather-container label {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* optional: space between label text and select */
+}
+
+.upload-btn {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s;
+}
+
+.upload-btn:hover {
+  background-color: #0056b3;
 }
