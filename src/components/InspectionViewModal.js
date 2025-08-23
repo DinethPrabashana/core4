@@ -67,11 +67,24 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
   // --- Complete button handler ---
   const handleComplete = () => {
-    setProgressStatus(prev => ({
-      ...prev,
+    const updatedProgressStatus = {
+      thermalUpload: "Completed",
       aiAnalysis: "Completed",
       review: "Completed"
-    }));
+    };
+
+    const updatedInspection = {
+      ...inspection,
+      inspectedDate: inspection.maintenanceUploadDate || inspection.date, // keep maintenance date as inspected date
+      progressStatus: updatedProgressStatus
+    };
+
+    if (updateInspection) {
+      updateInspection(updatedInspection);
+    }
+
+    setProgressStatus(updatedProgressStatus);
+    onClose();
   };
 
   const renderStep = (label, state) => {
@@ -132,7 +145,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         setMaintenanceUploadDate(new Date().toLocaleString());
         setLocalMaintenanceChanged(true);
 
-        // Update progress immediately
         setProgressStatus({
           thermalUpload: "Completed",
           aiAnalysis: "In Progress",
@@ -164,7 +176,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       <div className="modal-card">
         <h1 className="modal-title">Thermal Image</h1>
 
-        {/* Transformer Info + Progress side by side */}
         <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Transformer Info</h3>
@@ -187,7 +198,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           </div>
         </div>
 
-        {/* Baseline + Thermal side by side */}
         <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Baseline Image</h3>
@@ -252,7 +262,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
               </div>
             </div>
 
-            {/* Complete button */}
             <div className="complete-button-container">
               <button className="inspection-complete-btn" onClick={handleComplete}>Complete</button>
             </div>

@@ -12,27 +12,44 @@ export default function InspectionList({
   searchQueryInspection,
   setSearchQueryInspection,
   openAddInspectionModal,
-  onViewInspections, // <-- Full-page view callback from App.js
+  onViewInspections,
 }) {
 
-  // --- Delete inspection handler ---
   const handleDeleteInspection = (inspectionId) => {
     setInspections(prev => prev.filter(i => i.id !== inspectionId));
     setFilteredInspections(prev => prev.filter(i => i.id !== inspectionId));
   };
 
-  // --- Trigger full-page inspections view ---
   const handleViewTransformerInspections = (transformer) => {
     if (typeof onViewInspections === "function") {
       onViewInspections(transformer);
     }
   };
 
-  // --- Prepare table rows for all transformers ---
-  const transformerRows = transformers.map((t) => ({
-    ...t,
-    inspections: inspections.filter(i => i.transformer === t.id)
-  }));
+  const transformerRows = transformers.map((t) => {
+    const tInspections = inspections.filter(i => i.transformer === t.id);
+
+    // Latest maintenance date = newest inspection date not yet completed
+    const latestMaintenanceDate = tInspections
+      .filter(i => !i.inspectedDate)  // not yet completed
+      .reduce((latest, curr) =>
+        !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
+      , null)?.date || "-";
+
+    // Latest inspected date = newest inspection date marked completed
+    const latestInspectedDate = tInspections
+      .filter(i => i.inspectedDate)  // completed
+      .reduce((latest, curr) =>
+        !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
+      , null)?.inspectedDate || "-";
+
+    return {
+      ...t,
+      inspections: tInspections,
+      latestMaintenanceDate,
+      latestInspectedDate
+    };
+  });
 
   return (
     <div style={{ flexGrow: 1, padding: "20px" }}>
@@ -67,9 +84,8 @@ export default function InspectionList({
         <thead>
           <tr style={{ backgroundColor: "#02090fff", color: "white" }}>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Transformer</th>
-            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Region</th>
-            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Pole</th>
-            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Type</th>
+            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Maintenance Date</th>
+            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Inspected Date</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Total Inspections</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Actions</th>
           </tr>
@@ -78,9 +94,8 @@ export default function InspectionList({
           {transformerRows.map((t, index) => (
             <tr key={index}>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.number}</td>
-              <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.region}</td>
-              <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.pole}</td>
-              <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.type}</td>
+              <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.latestMaintenanceDate}</td>
+              <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.latestInspectedDate}</td>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.inspections.length}</td>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>
                 <button
@@ -101,7 +116,7 @@ export default function InspectionList({
           ))}
           {transformerRows.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ textAlign: "center", padding: "10px" }}>
+              <td colSpan={5} style={{ textAlign: "center", padding: "10px" }}>
                 No transformers found.
               </td>
             </tr>
