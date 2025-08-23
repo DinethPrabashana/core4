@@ -28,28 +28,38 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   // URLs
   const baselineImageURL = useMemo(() => {
     if (!baselineImage) return null;
-    return typeof baselineImage === "string" ? baselineImage : URL.createObjectURL(baselineImage);
+    if (baselineImage instanceof File || baselineImage instanceof Blob) return URL.createObjectURL(baselineImage);
+    return baselineImage; // base64 string or asset
   }, [baselineImage]);
 
   const maintenanceImageURL = useMemo(() => {
     if (!maintenanceImage) return null;
-    return typeof maintenanceImage === "string" ? maintenanceImage : URL.createObjectURL(maintenanceImage);
+    if (maintenanceImage instanceof File || maintenanceImage instanceof Blob) return URL.createObjectURL(maintenanceImage);
+    return maintenanceImage; // base64 string or asset
   }, [maintenanceImage]);
 
   // Handlers
   const handleBaselineUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setBaselineImage(file);
-      setBaselineUploadDate(new Date().toLocaleString());
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBaselineImage(reader.result);
+        setBaselineUploadDate(new Date().toLocaleString());
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleMaintenanceUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setMaintenanceImage(file);
-      setMaintenanceUploadDate(new Date().toLocaleString());
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setMaintenanceImage(reader.result);
+        setMaintenanceUploadDate(new Date().toLocaleString());
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -126,7 +136,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
               </div>
             ) : (
               <>
-                {/* <p>No baseline image uploaded.</p> */}
                 <input type="file" id="baselineUpload" onChange={handleBaselineUpload} className="file-input" />
                 <label htmlFor="baselineUpload" className="upload-btn">📤 Upload Baseline Image</label>
               </>
