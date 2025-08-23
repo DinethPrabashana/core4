@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import '../App.css';
 
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection }) {
   const transformer = transformers.find((t) => t.id === inspection.transformer);
@@ -19,13 +20,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     inspection.maintenanceUploadDate || (maintenanceImage ? new Date().toLocaleString() : null)
   );
 
-  // Uploader (static for now)
-  const uploader = "Admin";
+  const uploader = "Admin"; // Static
 
-  // Preview modal state
+  // Preview modal
   const [showBaselinePreview, setShowBaselinePreview] = useState(false);
 
-  // Generate URL safely (handles File or base64 string)
+  // URLs
   const baselineImageURL = useMemo(() => {
     if (!baselineImage) return null;
     return typeof baselineImage === "string" ? baselineImage : URL.createObjectURL(baselineImage);
@@ -76,21 +76,13 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const weatherOptions = ["Sunny", "Rainy", "Cloudy"];
 
   return (
-    <div style={{
-      position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-      backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center",
-      alignItems: "center", zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: "white", padding: "30px", borderRadius: "10px",
-        width: "85%", maxHeight: "90%", overflowY: "auto", boxShadow: "0px 0px 20px rgba(0,0,0,0.3)",
-        display: "flex", flexDirection: "column", gap: "20px"
-      }}>
-        <h1 style={{ textAlign: "center", marginBottom: "20px" }}>Thermal Image</h1>
+    <div className="modal-overlay">
+      <div className="modal-card">
+        <h1 className="modal-title">Thermal Image</h1>
 
         {/* Transformer Info + Workflow */}
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, border: "1px solid #ccc", borderRadius: "8px", padding: "15px", backgroundColor: "#f9f9f9" }}>
+        <div className="modal-flex">
+          <div className="modal-section">
             <h3>Transformer Info</h3>
             <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
             <p><strong>Pole:</strong> {transformer?.pole || "N/A"}</p>
@@ -101,23 +93,23 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
             <p><strong>Inspection Date:</strong> {inspection.date || "N/A"}</p>
           </div>
 
-          <div style={{ flex: 1, border: "1px solid #ccc", borderRadius: "8px", padding: "15px", backgroundColor: "#f5f5f5" }}>
+          <div className="modal-section">
             <h3>Workflow Progress (Inactive)</h3>
             {["Thermal Image Upload", "AI Analysis", "Thermal Image Review"].map(step => (
-              <div key={step} style={{ marginBottom: "5px" }}>
+              <div key={step} className="workflow-step">
                 <p>• {step}</p>
-                <div style={{ width: "100%", height: "10px", background: "#e0e0e0", borderRadius: "5px" }} />
+                <div className="workflow-bar" />
               </div>
             ))}
           </div>
         </div>
 
         {/* Baseline & Thermal Upload */}
-        <div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
+        <div className="modal-flex">
           {/* Baseline */}
-          <div style={{ flex: "1 1 300px", border: "1px solid #ccc", borderRadius: "8px", padding: "15px", minWidth: "300px" }}>
+          <div className="modal-section">
             <h3>Baseline Image</h3>
-            <div style={{ marginBottom: "10px" }}>
+            <div className="weather-select">
               <label>
                 Weather:{" "}
                 <select value={baselineWeather} onChange={e => setBaselineWeather(e.target.value)}>
@@ -125,30 +117,31 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 </select>
               </label>
             </div>
+
             {baselineImageURL ? (
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div className="image-actions">
                 <span>🖼️ Baseline Image uploaded</span>
                 <button onClick={() => setShowBaselinePreview(true)}>👁️</button>
-                <button onClick={handleBaselineDelete} style={{ color: "red" }}>🗑️</button>
+                <button onClick={handleBaselineDelete} className="danger-btn">🗑️</button>
               </div>
             ) : (
               <>
                 <p>No baseline image uploaded.</p>
-                <input type="file" id="baselineUpload" onChange={handleBaselineUpload} style={{ display: "none" }} />
-                <label htmlFor="baselineUpload" style={{ padding: "5px 10px", backgroundColor: "#28a745", color: "white", cursor: "pointer" }}>📤 Upload Baseline Image</label>
+                <input type="file" id="baselineUpload" onChange={handleBaselineUpload} className="file-input" />
+                <label htmlFor="baselineUpload" className="upload-btn">📤 Upload Baseline Image</label>
               </>
             )}
           </div>
 
           {/* Thermal */}
-          <div style={{ flex: "1 1 300px", border: "1px solid #ccc", borderRadius: "8px", padding: "15px", minWidth: "300px" }}>
+          <div className="modal-section">
             <h3>Thermal Image</h3>
-            <div style={{ display: "flex", gap: "15px", alignItems: "center", marginBottom: "10px" }}>
-              <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} style={{ display: "none" }} />
-              <label htmlFor="maintenanceUpload" style={{ padding: "5px 10px", backgroundColor: "#007bff", color: "white", cursor: "pointer", borderRadius: "5px" }}>Upload Thermal Image</label>
+            <div className="weather-select">
+              <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} className="file-input" />
+              <label htmlFor="maintenanceUpload" className="upload-btn blue-btn">Upload Thermal Image</label>
               <label>
                 Weather:{" "}
-                <select value={maintenanceWeather} onChange={e => setMaintenanceWeather(e.target.value)} style={{ marginLeft: "10px" }}>
+                <select value={maintenanceWeather} onChange={e => setMaintenanceWeather(e.target.value)}>
                   {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               </label>
@@ -158,15 +151,15 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
         {/* Comparison */}
         {baselineImageURL && maintenanceImageURL && (
-          <div style={{ marginTop: "20px", border: "1px solid #ccc", borderRadius: "8px", padding: "15px", backgroundColor: "#f9f9f9" }}>
-            <h3 style={{ textAlign: "center", marginBottom: "15px" }}>Thermal Image Comparison</h3>
-            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
-              <div style={{ flex: 1, textAlign: "center" }}>
+          <div className="modal-section comparison">
+            <h3 className="center-text">Thermal Image Comparison</h3>
+            <div className="comparison-flex">
+              <div className="image-card">
                 <h4>Baseline Image</h4>
-                <div style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", width: "420px", height: "400px", margin: "0 auto" }}>
-                  <img src={baselineImageURL} alt="Baseline" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                <div className="image-box">
+                  <img src={baselineImageURL} alt="Baseline" />
                 </div>
-                <div style={{ marginTop: "8px", fontSize: "14px", color: "#555", textAlign: "left", width: "420px", margin: "8px auto 0" }}>
+                <div className="image-info">
                   <p><strong>Date & Time:</strong> {baselineUploadDate || "N/A"}</p>
                   <p><strong>Weather:</strong> {baselineWeather}</p>
                   <p><strong>Uploader:</strong> {uploader}</p>
@@ -174,12 +167,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 </div>
               </div>
 
-              <div style={{ flex: 1, textAlign: "center" }}>
+              <div className="image-card">
                 <h4>Thermal Image</h4>
-                <div style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", width: "420px", height: "400px", margin: "0 auto" }}>
-                  <img src={maintenanceImageURL} alt="Thermal" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                <div className="image-box">
+                  <img src={maintenanceImageURL} alt="Thermal" />
                 </div>
-                <div style={{ marginTop: "8px", fontSize: "14px", color: "#555", textAlign: "left", width: "420px", margin: "8px auto 0" }}>
+                <div className="image-info">
                   <p><strong>Date & Time:</strong> {maintenanceUploadDate || "N/A"}</p>
                   <p><strong>Weather:</strong> {maintenanceWeather}</p>
                   <p><strong>Uploader:</strong> {uploader}</p>
@@ -190,25 +183,21 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           </div>
         )}
 
-        {/* Baseline Preview Modal */}
+        {/* Baseline Preview */}
         {showBaselinePreview && baselineImageURL && (
-          <div style={{
-            position: "fixed", top: 0, left: 0, width: "100%", height: "100%",
-            backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center",
-            alignItems: "center", zIndex: 1000
-          }}>
-            <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", maxWidth: "80%", maxHeight: "80%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <div className="modal-overlay">
+            <div className="modal-card preview-card">
               <h3>Baseline Image Preview</h3>
-              <img src={baselineImageURL} alt="Baseline Preview" style={{ maxWidth: "100%", maxHeight: "400px", objectFit: "contain" }} />
-              <button onClick={() => setShowBaselinePreview(false)} style={{ marginTop: "15px", padding: "5px 10px", backgroundColor: "#007bff", color: "white", borderRadius: "5px", cursor: "pointer" }}>Close</button>
+              <img src={baselineImageURL} alt="Baseline Preview" className="preview-image" />
+              <button onClick={() => setShowBaselinePreview(false)} className="inspection-cancel-btn">Close</button>
             </div>
           </div>
         )}
 
         {/* Save / Close */}
-        <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-          <button onClick={handleSave} style={{ padding: "5px 10px", backgroundColor: "#28a745", color: "white", cursor: "pointer", borderRadius: "5px" }}>Save</button>
-          <button onClick={onClose} style={{ padding: "5px 10px", backgroundColor: "#dc3545", color: "white", cursor: "pointer", borderRadius: "5px" }}>Close</button>
+        <div className="inspection-modal-buttons">
+          <button onClick={handleSave} className="inspection-save-btn">Save</button>
+          <button onClick={onClose} className="inspection-cancel-btn">Close</button>
         </div>
       </div>
     </div>
