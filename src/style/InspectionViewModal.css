@@ -1,0 +1,161 @@
+/* inspection view popup main styling */
+.modal-flex {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.modal-section {
+  flex: 1;
+  min-width: 300px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 15px;
+  background-color: #f9f9f9;
+}
+
+.modal-section:nth-child(2) {
+  background-color: #f5f5f5;
+}
+
+.workflow-step {
+  margin-bottom: 5px;
+}
+
+.workflow-bar {
+  width: 100%;
+  height: 10px;
+  background: #e0e0e0;
+  border-radius: 5px;
+}
+
+.comparison-flex {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.image-card {
+  flex: 1;
+  text-align: center;
+}
+
+.image-box {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 10px;
+  width: 420px;
+  height: 400px;
+  margin: 0 auto;
+}
+
+.image-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-info {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #555;
+  text-align: left;
+  width: 420px;
+  margin: 8px auto 0;
+}
+
+.file-input {
+  display: none;
+}
+
+.upload-btn {
+  padding: 5px 10px;
+  background-color: #28a745;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+.blue-btn {
+  background-color: #007bff;
+}
+
+.preview-card {
+  max-width: 50%;
+  max-height: 50%;
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.weather-select {
+  margin-bottom: 10px;
+}
+
+.image-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0; 
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-card {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  width: 85%;
+  max-height: 90%;
+  overflow-y: auto;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 10000;
+}
+
+.upload-weather-container {
+  display: flex;
+  align-items: center;
+  gap: 15px; /* space between upload button and dropdown */
+  margin-bottom: 10px;
+}
+
+.upload-weather-container label {
+  display: flex;
+  align-items: center;
+  gap: 5px; /* optional: space between label text and select */
+}
+
+.upload-btn {
+  padding: 5px 10px;
+  background-color: #007bff;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s;
+}
+
+.upload-btn:hover {
+  background-color: #0056b3;
+}

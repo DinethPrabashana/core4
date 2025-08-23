@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import placeholderImage from "../assets/transformer.jpg";
+import "../style/TransformerList.css"
 
 export default function TransformerList({
   filteredTransformers = [],

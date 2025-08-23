@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import '../App.css';
+import '../style/InspectionViewModal.css';
 
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection }) {
   const transformer = transformers.find((t) => t.id === inspection.transformer);
@@ -126,7 +126,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
               </div>
             ) : (
               <>
-                <p>No baseline image uploaded.</p>
+                {/* <p>No baseline image uploaded.</p> */}
                 <input type="file" id="baselineUpload" onChange={handleBaselineUpload} className="file-input" />
                 <label htmlFor="baselineUpload" className="upload-btn">📤 Upload Baseline Image</label>
               </>

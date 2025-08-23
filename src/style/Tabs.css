@@ -1,0 +1,17 @@
+/* === TABS === */
+.tabs-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: black;
+  color: white;
+}
+
+.tab-button.active {
+  background: rgb(0, 4, 250);
+  color: white;
+}

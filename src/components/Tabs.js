@@ -1,4 +1,5 @@
 import React from "react";
+import "../style/Tabs.css"
 
 export default function Tabs({ activeTab, setActiveTab }) {
   return (

@@ -1,5 +1,6 @@
 import React from "react";
 import corefourLogo from "../assets/corefour.jpg";
+import "../style/Sidebar.css"
 
 export default function Sidebar({ setActivePage }) {
   return (
