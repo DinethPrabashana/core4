@@ -29,19 +29,22 @@ export default function InspectionList({
   const transformerRows = transformers.map((t) => {
     const tInspections = inspections.filter(i => i.transformer === t.id);
 
-    // Latest maintenance date = newest inspection date not yet completed
-    const latestMaintenanceDate = tInspections
-      .filter(i => !i.inspectedDate)  // not yet completed
-      .reduce((latest, curr) =>
-        !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
-      , null)?.date || "-";
+// Next maintenance date = EARLIEST pending inspection date
+const completed = tInspections.filter(i => i.inspectedDate);  // only completed
+const latestInspectedDate = completed.length
+  ? completed.reduce((latest, curr) =>
+      !latest || new Date(curr.inspectedDate) > new Date(latest.inspectedDate) ? curr : latest
+    ).inspectedDate
+  : "-";
 
-    // Latest inspected date = newest inspection date marked completed
-    const latestInspectedDate = tInspections
-      .filter(i => i.inspectedDate)  // completed
-      .reduce((latest, curr) =>
-        !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
-      , null)?.inspectedDate || "-";
+// Latest maintenance date = next pending inspection
+const pending = tInspections.filter(i => !i.inspectedDate);
+const latestMaintenanceDate = pending.length
+  ? pending.reduce((latest, curr) =>
+      !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
+    ).date
+  : "-";
+
 
     return {
       ...t,
@@ -91,8 +94,8 @@ export default function InspectionList({
           </tr>
         </thead>
         <tbody>
-          {transformerRows.map((t, index) => (
-            <tr key={index}>
+          {transformerRows.map((t) => (
+            <tr key={t.id || t.number}>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.number}</td>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.latestMaintenanceDate}</td>
               <td style={{ border: "1px solid #ddd", padding: "10px" }}>{t.latestInspectedDate}</td>

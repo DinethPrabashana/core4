@@ -67,35 +67,20 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
   // --- Complete button handler ---
   const handleComplete = () => {
-    const updatedProgressStatus = {
-      thermalUpload: "Completed",
-      aiAnalysis: "Completed",
-      review: "Completed"
-    };
-
     const updatedInspection = {
       ...inspection,
-      inspectedDate: inspection.maintenanceUploadDate || inspection.date, // keep maintenance date as inspected date
-      progressStatus: updatedProgressStatus
+      status: "Completed",
+      inspectedDate: inspection.date, // Use scheduled maintenance date
+      date: null, // Clear maintenance date
+      progressStatus: {
+        thermalUpload: "Completed",
+        aiAnalysis: "Completed",
+        review: "Completed"
+      }
     };
+    setProgressStatus(updatedInspection.progressStatus);
 
-    if (updateInspection) {
-      updateInspection(updatedInspection);
-    }
-
-    setProgressStatus(updatedProgressStatus);
-    onClose();
-  };
-
-  const renderStep = (label, state) => {
-    const color = state === "Completed" ? "green" : state === "In Progress" ? "orange" : "grey";
-    return (
-      <div className="progress-step">
-        <div className="progress-circle" style={{ backgroundColor: color }}></div>
-        <span className="progress-label"><strong>{label}</strong></span>
-        <span className="progress-status"><strong>{state}</strong></span>
-      </div>
-    );
+    if (updateInspection) updateInspection(updatedInspection);
   };
 
   // --- Handlers ---
@@ -142,7 +127,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       const reader = new FileReader();
       reader.onloadend = () => {
         setMaintenanceImage(reader.result);
-        setMaintenanceUploadDate(new Date().toLocaleString());
         setLocalMaintenanceChanged(true);
 
         setProgressStatus({
@@ -165,10 +149,23 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceImage,
         maintenanceWeather,
         maintenanceUploadDate,
-        progressStatus
+        progressStatus,
+        inspectedDate: inspection.date, // Use scheduled maintenance date
+        status: progressStatus.thermalUpload === "Completed" ? "Completed" : inspection.status
       });
     }
     onClose();
+  };
+
+  const renderStep = (label, state) => {
+    const color = state === "Completed" ? "green" : state === "In Progress" ? "orange" : "grey";
+    return (
+      <div className="progress-step">
+        <div className="progress-circle" style={{ backgroundColor: color }}></div>
+        <span className="progress-label"><strong>{label}</strong></span>
+        <span className="progress-status"><strong>{state}</strong></span>
+      </div>
+    );
   };
 
   return (
@@ -176,6 +173,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       <div className="modal-card">
         <h1 className="modal-title">Thermal Image</h1>
 
+        {/* Transformer Info + Progress */}
         <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Transformer Info</h3>
@@ -198,6 +196,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           </div>
         </div>
 
+        {/* Baseline + Thermal */}
         <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Baseline Image</h3>
@@ -254,7 +253,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 <h4>Thermal Image</h4>
                 <div className="image-box"><img src={maintenanceImageURL} alt="Thermal" /></div>
                 <div className="image-info">
-                  <p><strong>Date & Time:</strong> {maintenanceUploadDate || "N/A"}</p>
+                  <p><strong>Date & Time:</strong> {inspection.date || "N/A"}</p>
                   <p><strong>Weather:</strong> {maintenanceWeather}</p>
                   <p><strong>Uploader:</strong> {uploader}</p>
                   <p><strong>Image Type:</strong> Maintenance</p>
