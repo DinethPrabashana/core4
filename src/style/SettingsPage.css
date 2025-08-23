@@ -1,0 +1,29 @@
+.settings-container {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* Align buttons to left */
+  gap: 10px; /* Space between buttons */
+}
+
+.settings-container h2 {
+  margin-bottom: 20px;
+}
+
+.settings-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  width: 250px; /* consistent button width */
+  text-align: left;
+  font-size: 16px;
+}
+
+/* Button colors */
+.settings-btn.blue { background-color: #1d72bd; }
+.settings-btn.green { background-color: #28a745; }
+.settings-btn.purple { background-color: #6c63ff; }
+.settings-btn.orange { background-color: #ff9800; }
+.settings-btn.red { background-color: red; }

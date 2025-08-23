@@ -45,7 +45,7 @@ export default function TransformerList({
 
   return (
     <div className="transformer-container">
-      <h1 className="page-title">Transformer Page</h1>
+      <h1 className="page-title">Transformers</h1>
 
       <button className="add-transformer-btn" onClick={() => setShowModal()}>
         + Add Transformer

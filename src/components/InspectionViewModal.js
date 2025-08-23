@@ -11,13 +11,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [baselineUploadDate, setBaselineUploadDate] = useState(inspection.baselineUploadDate || transformer?.baselineUploadDate || null);
   const [localBaselineChanged, setLocalBaselineChanged] = useState(false);
 
-  // --- Progress state ---
-  const [progress, setProgress] = useState({
-    thermalUpload: inspection.maintenanceImage ? "Completed" : "Pending",
-    aiAnalysis: inspection.maintenanceImage ? "In Progress" : "Pending",
-    review: inspection.maintenanceImage ? "In Progress" : "Pending",
-  });
-
   // Sync baseline image if transformer updates externally
   useEffect(() => {
     if (!localBaselineChanged) {
@@ -46,17 +39,15 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   // --- Maintenance Image ---
   const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "Sunny");
-  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(
-    inspection.maintenanceUploadDate || (inspection.maintenanceImage ? new Date().toLocaleString() : null)
-  );
+  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || (inspection.maintenanceImage ? new Date().toLocaleString() : null));
   const [localMaintenanceChanged, setLocalMaintenanceChanged] = useState(false);
 
-  // Sync maintenance image if transformer updates externally
+  // Sync maintenance image if transformer updates externally (optional if you have a transformer maintenance image)
   useEffect(() => {
     if (!localMaintenanceChanged && transformer?.maintenanceImage) {
       setMaintenanceImage(transformer.maintenanceImage);
-      setMaintenanceWeather(transformer?.maintenanceWeather || "Sunny");
-      setMaintenanceUploadDate(transformer?.maintenanceUploadDate || null);
+      setMaintenanceWeather(transformer.maintenanceWeather || "Sunny");
+      setMaintenanceUploadDate(transformer.maintenanceUploadDate || null);
     }
   }, [transformer, localMaintenanceChanged]);
 
@@ -124,27 +115,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        const now = new Date().toLocaleString();
         setMaintenanceImage(reader.result);
-        setMaintenanceUploadDate(now);
+        setMaintenanceUploadDate(new Date().toLocaleString());
         setLocalMaintenanceChanged(true);
-
-        // --- Update inspection status and progress ---
-        setProgress({
-          thermalUpload: "Completed",
-          aiAnalysis: "In Progress",
-          review: "In Progress"
-        });
-
-        if (updateInspection) {
-          updateInspection({
-            ...inspection,
-            maintenanceImage: reader.result,
-            maintenanceWeather,
-            maintenanceUploadDate: now,
-            status: "In Progress"
-          });
-        }
       };
       reader.readAsDataURL(file);
     }
@@ -160,26 +133,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceImage,
         maintenanceWeather,
         maintenanceUploadDate,
-        status: maintenanceImage ? "In Progress" : inspection.status
       });
     }
     onClose();
-  };
-
-  // --- Function to render progress bar step ---
-  const renderStep = (label, state) => {
-    let color;
-    if (state === "Completed") color = "green";
-    else if (state === "In Progress") color = "orange";
-    else color = "grey";
-
-    return (
-      <div className="progress-step">
-        <div className="progress-circle" style={{ backgroundColor: color }}></div>
-        <span>{label}</span>
-        <span className="progress-status">{state}</span>
-      </div>
-    );
   };
 
   return (
@@ -187,7 +143,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       <div className="modal-card">
         <h1 className="modal-title">Thermal Image</h1>
 
-        {/* Transformer Info + Progress Side by Side */}
         <div className="modal-flex">
           <div className="modal-section">
             <h3>Transformer Info</h3>
@@ -199,18 +154,8 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
             <p><strong>Inspector:</strong> {inspection.inspector || "N/A"}</p>
             <p><strong>Inspection Date:</strong> {inspection.date || "N/A"}</p>
           </div>
-
-          <div className="modal-section">
-            <h3>Progress</h3>
-            <div className="progress-bar-container">
-              {renderStep("Thermal Image Upload", progress.thermalUpload)}
-              {renderStep("AI Analysis", progress.aiAnalysis)}
-              {renderStep("Thermal Image Review", progress.review)}
-            </div>
-          </div>
         </div>
 
-        {/* Baseline + Thermal Images */}
         <div className="modal-flex">
           <div className="modal-section">
             <h3>Baseline Image</h3>
