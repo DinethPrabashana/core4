@@ -65,6 +65,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     }
   );
 
+  // --- Track completion ---
+  const [isCompleted, setIsCompleted] = useState(false);
+
   // --- Complete button handler ---
   const handleComplete = () => {
     const updatedInspection = {
@@ -79,6 +82,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       }
     };
     setProgressStatus(updatedInspection.progressStatus);
+    setIsCompleted(true); // mark as completed
 
     if (updateInspection) updateInspection(updatedInspection);
   };
@@ -150,8 +154,8 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceWeather,
         maintenanceUploadDate,
         progressStatus,
-        inspectedDate: inspection.date, // Use scheduled maintenance date
-        status: progressStatus.thermalUpload === "Completed" ? "Completed" : inspection.status
+        inspectedDate: isCompleted ? inspection.date : inspection.inspectedDate, // Only update if completed
+        status: progressStatus.thermalUpload === "Completed" && isCompleted ? "Completed" : inspection.status
       });
     }
     onClose();

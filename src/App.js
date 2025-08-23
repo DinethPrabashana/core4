@@ -13,6 +13,7 @@ import t1 from "./assets/transformer1.png";
 import t2 from "./assets/transformer2.png";
 import t3 from "./assets/transformer3.png";
 import t4 from "./assets/transformer4.png";
+import t5 from "./assets/transformer5.png";
 
 import "./App.css";
 
@@ -59,21 +60,32 @@ function App() {
   const [showTransformerInspectionsPage, setShowTransformerInspectionsPage] = useState(false);
   const [selectedTransformerForPage, setSelectedTransformerForPage] = useState(null);
 
+  // --- Toggle to decide whether to load default transformers ---
+  const LOAD_DEFAULT_TRANSFORMERS = true; // <-- set to true if you want default data
+
   // --- Load transformers ---
   useEffect(() => {
     const saved = localStorage.getItem("transformers");
     if (saved) {
-      try { setTransformers(JSON.parse(saved)); } 
-      catch { setDefaultTransformers(); }
-    } else { setDefaultTransformers(); }
+      try {
+        setTransformers(JSON.parse(saved));
+      } catch {
+        if (LOAD_DEFAULT_TRANSFORMERS) setDefaultTransformers();
+        else setTransformers([]);
+      }
+    } else if (LOAD_DEFAULT_TRANSFORMERS) {
+      setDefaultTransformers();
+    }
   }, []);
 
   const setDefaultTransformers = () => {
     const defaultTransformers = [
-      { id: 1, number: "TX-001", pole: "A1", region: "North", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
-      { id: 2, number: "TX-002", pole: "A2", region: "South", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
-      { id: 3, number: "TX-003", pole: "B1", region: "East", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
-      { id: 4, number: "TX-004", pole: "B2", region: "West", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
+      { id: 1, number: "TX-001", pole: "A1", region: "Ragama", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
+      { id: 2, number: "TX-002", pole: "A2", region: "Gampaha", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
+      { id: 3, number: "TX-003", pole: "B1", region: "Nugegoda", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
+      { id: 4, number: "TX-004", pole: "B2", region: "Colombo", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
+      { id: 5, number: "TX-005", pole: "C1", region: "Kalaniya", type: "Distribution", baselineImage: t5, baselineUploadDate: null, weather: "Cloudy", location: "Site 5" },
+
     ];
     setTransformers(defaultTransformers);
     localStorage.setItem("transformers", JSON.stringify(defaultTransformers));
