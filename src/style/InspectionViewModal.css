@@ -159,3 +159,28 @@
 .upload-btn:hover {
   background-color: #0056b3;
 }
+
+
+/*progress bar style*/
+.progress-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.progress-status {
+  margin-left: auto;
+  font-weight: bold;
+}

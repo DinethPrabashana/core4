@@ -272,9 +272,9 @@ button {
   text-align: center;
 }
 
-.status-in-progress {
+.status-inprogress {
   color: white;
-  background-color: orange;
+  background-color: rgb(91, 189, 91); /* green tone */
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: bold;
