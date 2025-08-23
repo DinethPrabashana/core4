@@ -11,7 +11,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [baselineUploadDate, setBaselineUploadDate] = useState(inspection.baselineUploadDate || transformer?.baselineUploadDate || null);
   const [localBaselineChanged, setLocalBaselineChanged] = useState(false);
 
-  // Sync baseline image if transformer updates externally
   useEffect(() => {
     if (!localBaselineChanged) {
       setBaselineImage(transformer?.baselineImage || null);
@@ -20,7 +19,6 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     }
   }, [transformer, localBaselineChanged]);
 
-  // Manage baseline image URL safely
   const [baselineImageURL, setBaselineImageURL] = useState(null);
   useEffect(() => {
     if (!baselineImage) {
@@ -42,16 +40,14 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || (inspection.maintenanceImage ? new Date().toLocaleString() : null));
   const [localMaintenanceChanged, setLocalMaintenanceChanged] = useState(false);
 
-  // Sync maintenance image if transformer updates externally (optional if you have a transformer maintenance image)
   useEffect(() => {
     if (!localMaintenanceChanged && transformer?.maintenanceImage) {
       setMaintenanceImage(transformer.maintenanceImage);
       setMaintenanceWeather(transformer.maintenanceWeather || "Sunny");
-      setMaintenanceUploadDate(transformer.maintenanceUploadDate || null);
+      setMaintenanceUploadDate(transformer?.maintenanceUploadDate || null);
     }
   }, [transformer, localMaintenanceChanged]);
 
-  // Manage maintenance image URL safely
   const [maintenanceImageURL, setMaintenanceImageURL] = useState(null);
   useEffect(() => {
     if (!maintenanceImage) {
@@ -69,6 +65,40 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
   const [showBaselinePreview, setShowBaselinePreview] = useState(false);
   const weatherOptions = ["Sunny", "Rainy", "Cloudy"];
+
+  // --- Progress status ---
+  const [progressStatus, setProgressStatus] = useState({
+    thermalUpload: "Pending",
+    aiAnalysis: "Pending",
+    review: "Pending",
+  });
+
+  useEffect(() => {
+    if (maintenanceImage) {
+      setProgressStatus({
+        thermalUpload: "Completed",
+        aiAnalysis: "In Progress",
+        review: "In Progress",
+      });
+    } else {
+      setProgressStatus({
+        thermalUpload: "Pending",
+        aiAnalysis: "Pending",
+        review: "Pending",
+      });
+    }
+  }, [maintenanceImage]);
+
+  const renderStep = (label, state) => {
+    const color = state === "Completed" ? "green" : state === "In Progress" ? "orange" : "grey";
+    return (
+      <div className="progress-step">
+        <div className="progress-circle" style={{ backgroundColor: color }}></div>
+        <span className="progress-label">{label}</span>
+        <span className="progress-status">{state}</span>
+      </div>
+    );
+  };
 
   // --- Handlers ---
   const handleBaselineUpload = (e) => {
@@ -143,7 +173,8 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       <div className="modal-card">
         <h1 className="modal-title">Thermal Image</h1>
 
-        <div className="modal-flex">
+        {/* Transformer Info + Progress side by side */}
+        <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Transformer Info</h3>
             <p><strong>Number:</strong> {transformer?.number || "N/A"}</p>
@@ -154,9 +185,19 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
             <p><strong>Inspector:</strong> {inspection.inspector || "N/A"}</p>
             <p><strong>Inspection Date:</strong> {inspection.date || "N/A"}</p>
           </div>
+
+          <div className="modal-section">
+            <h3>Inspection Progress</h3>
+            <div className="progress-bar-container">
+              {renderStep("Thermal Image Upload", progressStatus.thermalUpload)}
+              {renderStep("AI Analysis", progressStatus.aiAnalysis)}
+              {renderStep("Thermal Image Review", progressStatus.review)}
+            </div>
+          </div>
         </div>
 
-        <div className="modal-flex">
+        {/* Baseline + Thermal side by side */}
+        <div className="modal-flex-horizontal">
           <div className="modal-section">
             <h3>Baseline Image</h3>
             <div className="weather-select">

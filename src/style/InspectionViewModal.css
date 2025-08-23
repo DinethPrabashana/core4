@@ -32,7 +32,7 @@
 .comparison-flex {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
@@ -160,12 +160,24 @@
   background-color: #0056b3;
 }
 
+/* progress bar style */
+.modal-flex-horizontal {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  margin-bottom: 20px;
+}
 
-/*progress bar style*/
+.modal-flex-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .progress-bar-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .progress-step {
@@ -175,19 +187,23 @@
 }
 
 .progress-circle {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
 }
 
-.progress-status {
-  margin-left: auto;
+/* Bold and same width progress labels/status */
+.progress-label {
   font-weight: bold;
+  flex: 1; /* same width for all labels */
 }
 
+.progress-status {
+  font-weight: bold;
+  width: 110px; /* fixed width for alignment */
+}
 
-/*complete button style*/
-
+/* complete button style */
 .complete-button-container {
   margin-top: 15px;
   text-align: center;
