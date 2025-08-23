@@ -12,8 +12,15 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "Sunny");
 
   // Upload dates
-  const [baselineUploadDate, setBaselineUploadDate] = useState(inspection.baselineUploadDate || (baselineImage ? new Date().toLocaleString() : null));
-  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || (maintenanceImage ? new Date().toLocaleString() : null));
+  const [baselineUploadDate, setBaselineUploadDate] = useState(
+    inspection.baselineUploadDate || (baselineImage ? new Date().toLocaleString() : null)
+  );
+  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(
+    inspection.maintenanceUploadDate || (maintenanceImage ? new Date().toLocaleString() : null)
+  );
+
+  // Uploader (static for now)
+  const uploader = "Admin";
 
   // Preview modal state
   const [showBaselinePreview, setShowBaselinePreview] = useState(false);
@@ -136,7 +143,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           {/* Thermal */}
           <div style={{ flex: "1 1 300px", border: "1px solid #ccc", borderRadius: "8px", padding: "15px", minWidth: "300px" }}>
             <h3>Thermal Image</h3>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "10px" }}>
+            <div style={{ display: "flex", gap: "15px", alignItems: "center", marginBottom: "10px" }}>
               <input type="file" id="maintenanceUpload" onChange={handleMaintenanceUpload} style={{ display: "none" }} />
               <label htmlFor="maintenanceUpload" style={{ padding: "5px 10px", backgroundColor: "#007bff", color: "white", cursor: "pointer", borderRadius: "5px" }}>Upload Thermal Image</label>
               <label>
@@ -159,7 +166,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 <div style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", width: "420px", height: "400px", margin: "0 auto" }}>
                   <img src={baselineImageURL} alt="Baseline" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 </div>
-                <p style={{ marginTop: "8px", fontSize: "14px", color: "#555" }}>Date & Time: {baselineUploadDate || "N/A"} | Weather: {baselineWeather}</p>
+                <div style={{ marginTop: "8px", fontSize: "14px", color: "#555", textAlign: "left", width: "420px", margin: "8px auto 0" }}>
+                  <p><strong>Date & Time:</strong> {baselineUploadDate || "N/A"}</p>
+                  <p><strong>Weather:</strong> {baselineWeather}</p>
+                  <p><strong>Uploader:</strong> {uploader}</p>
+                  <p><strong>Image Type:</strong> Baseline</p>
+                </div>
               </div>
 
               <div style={{ flex: 1, textAlign: "center" }}>
@@ -167,7 +179,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
                 <div style={{ border: "1px solid #ccc", borderRadius: "8px", padding: "10px", width: "420px", height: "400px", margin: "0 auto" }}>
                   <img src={maintenanceImageURL} alt="Thermal" style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                 </div>
-                <p style={{ marginTop: "8px", fontSize: "14px", color: "#555" }}>Date & Time: {maintenanceUploadDate || "N/A"} | Weather: {maintenanceWeather}</p>
+                <div style={{ marginTop: "8px", fontSize: "14px", color: "#555", textAlign: "left", width: "420px", margin: "8px auto 0" }}>
+                  <p><strong>Date & Time:</strong> {maintenanceUploadDate || "N/A"}</p>
+                  <p><strong>Weather:</strong> {maintenanceWeather}</p>
+                  <p><strong>Uploader:</strong> {uploader}</p>
+                  <p><strong>Image Type:</strong> Maintenance</p>
+                </div>
               </div>
             </div>
           </div>
