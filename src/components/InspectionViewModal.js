@@ -32,7 +32,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   // --- Maintenance Image ---
   const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "Sunny");
-  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || (inspection.maintenanceImage ? new Date().toLocaleString() : null));
+  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || null);
   const [localMaintenanceChanged, setLocalMaintenanceChanged] = useState(false);
 
   useEffect(() => {
@@ -57,37 +57,20 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const weatherOptions = ["Sunny", "Rainy", "Cloudy"];
 
   // --- Progress status ---
-  const [progressStatus, setProgressStatus] = useState({
-    thermalUpload: "Pending",
-    aiAnalysis: "Pending",
-    review: "Pending",
-  });
-
-  // Initialize progressStatus from inspection prop to persist
-  useEffect(() => {
-    if (inspection.progressStatus) {
-      setProgressStatus(inspection.progressStatus);
-    } else if (maintenanceImage) {
-      setProgressStatus({
-        thermalUpload: "Completed",
-        aiAnalysis: "In Progress",
-        review: "In Progress",
-      });
-    } else {
-      setProgressStatus({
-        thermalUpload: "Pending",
-        aiAnalysis: "Pending",
-        review: "Pending",
-      });
+  const [progressStatus, setProgressStatus] = useState(
+    inspection.progressStatus || {
+      thermalUpload: inspection.maintenanceImage ? "Completed" : "Pending",
+      aiAnalysis: inspection.maintenanceImage ? "In Progress" : "Pending",
+      review: inspection.maintenanceImage ? "In Progress" : "Pending"
     }
-  }, [inspection, maintenanceImage]);
+  );
 
   // --- Complete button handler ---
   const handleComplete = () => {
     setProgressStatus(prev => ({
       ...prev,
       aiAnalysis: "Completed",
-      review: "Completed",
+      review: "Completed"
     }));
   };
 
@@ -148,6 +131,13 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         setMaintenanceImage(reader.result);
         setMaintenanceUploadDate(new Date().toLocaleString());
         setLocalMaintenanceChanged(true);
+
+        // Update progress immediately
+        setProgressStatus({
+          thermalUpload: "Completed",
+          aiAnalysis: "In Progress",
+          review: "In Progress"
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -163,7 +153,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceImage,
         maintenanceWeather,
         maintenanceUploadDate,
-        progressStatus, // <-- save progressStatus to persist
+        progressStatus
       });
     }
     onClose();

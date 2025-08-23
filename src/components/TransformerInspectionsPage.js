@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import InspectionModal from "./InspectionModal";
-import "../style/TransformerInspectionsPage.css"
+import "../style/TransformerInspectionsPage.css";
 
 export default function TransformerInspectionsPage({
   transformer,
@@ -19,6 +19,20 @@ export default function TransformerInspectionsPage({
     notes: ""
   });
 
+  // --- Helper to get current status based on progress ---
+  const getInspectionStatus = (inspection) => {
+    const progress = inspection.progressStatus;
+    if (progress) {
+      const { thermalUpload, aiAnalysis, review } = progress;
+      if (aiAnalysis === "Completed" && review === "Completed") return "Completed";
+      if (thermalUpload === "Completed") return "In Progress";
+    } else if (inspection.maintenanceImage) {
+      // fallback if progressStatus is not defined
+      return "In Progress";
+    }
+    return "Pending";
+  };
+
   const handleDeleteInspection = (id) => {
     setInspections(prev => prev.filter(i => i.id !== id));
     setFilteredInspections(prev => prev.filter(i => i.id !== id));
@@ -31,7 +45,11 @@ export default function TransformerInspectionsPage({
       maintenanceImage: null,
       maintenanceUploadDate: null,
       maintenanceWeather: "Sunny",
-      status: "Pending"
+      progressStatus: {
+        thermalUpload: "Pending",
+        aiAnalysis: "Pending",
+        review: "Pending"
+      }
     };
     setInspections(prev => [...prev, newInspection]);
     setFilteredInspections(prev => [...prev, newInspection]);
@@ -46,6 +64,12 @@ export default function TransformerInspectionsPage({
 
   const generateInspectionNumber = (transformerNumber, index) => {
     return `${transformerNumber}-INSP${index + 1}`;
+  };
+
+  // --- Update an inspection after viewing/modifying in modal ---
+  const handleUpdateInspection = (updatedInspection) => {
+    setInspections(prev => prev.map(i => i.id === updatedInspection.id ? updatedInspection : i));
+    setFilteredInspections(prev => prev.map(i => i.id === updatedInspection.id ? updatedInspection : i));
   };
 
   return (
@@ -78,14 +102,14 @@ export default function TransformerInspectionsPage({
                 <td>{i.date}</td>
                 <td>{i.notes}</td>
                 <td>
-                  <span className={`status-label ${i.status?.toLowerCase().replace(" ", "-") || "pending"}`}>
-                    {i.status || "Pending"}
+                  <span className={`status-label ${getInspectionStatus(i).toLowerCase().replace(" ", "-")}`}>
+                    {getInspectionStatus(i)}
                   </span>
                 </td>
                 <td>
                   <button
                     className="inspection-btn view-btn"
-                    onClick={() => onViewInspection && onViewInspection(i)}
+                    onClick={() => onViewInspection && onViewInspection(i, handleUpdateInspection)}
                   >
                     View
                   </button>
