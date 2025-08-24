@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import axios from "axios";
 import placeholderImage from "../assets/transformer.jpg";
 import "../style/TransformerList.css";
 
@@ -17,15 +18,8 @@ export default function TransformerList({
   const [imageURL, setImageURL] = useState(null);
 
   useEffect(() => {
-    if (selectedTransformer?.baselineImage) {
-      const file = selectedTransformer.baselineImage;
-      if (typeof file === "string") {
-        setImageURL(file);
-      } else {
-        const url = URL.createObjectURL(file);
-        setImageURL(url);
-        return () => URL.revokeObjectURL(url);
-      }
+    if (selectedTransformer?.baselineImagePath) {
+      setImageURL(`http://localhost:8080${selectedTransformer.baselineImagePath}`);
     } else {
       setImageURL(null);
     }
@@ -38,8 +32,12 @@ export default function TransformerList({
 
   const handleDelete = (t) => {
     if (window.confirm("Are you sure you want to delete this transformer?")) {
-      setTransformers(transformers.filter((item) => item.id !== t.id));
-      if (selectedTransformer?.id === t.id) setSelectedTransformer(null);
+      axios.delete(`http://localhost:8080/api/transformers/${t.id}`)
+        .then(() => {
+          setTransformers(prev => prev.filter(item => item.id !== t.id));
+          if (selectedTransformer?.id === t.id) setSelectedTransformer(null);
+        })
+        .catch(err => console.error("Error deleting transformer:", err));
     }
   };
 
@@ -51,7 +49,6 @@ export default function TransformerList({
         + Add Transformer
       </button>
 
-      {/* Search */}
       <div className="search-bar">
         <select
           value={searchFieldDetails}
@@ -72,10 +69,8 @@ export default function TransformerList({
         />
       </div>
 
-      {/* Selected Transformer */}
       {selectedTransformer && (
         <div className="selected-transformer">
-          {/* Transformer Info */}
           <div className="selected-info">
             {["number", "pole", "region", "type"].map((field) => (
               <div key={field} className="info-card">
@@ -89,7 +84,6 @@ export default function TransformerList({
             </button>
           </div>
 
-          {/* Image Section */}
           <div className="selected-image-container">
             <strong className="image-title">Baseline Image</strong>
             <img src={imageURL || placeholderImage} alt="Transformer" className="selected-image" />
@@ -97,7 +91,6 @@ export default function TransformerList({
         </div>
       )}
 
-      {/* Transformer Table */}
       <table className="transformer-table">
         <thead>
           <tr className="table-header">

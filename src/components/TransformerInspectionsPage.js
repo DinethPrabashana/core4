@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import axios from "axios";
 import InspectionModal from "./InspectionModal";
 import "../style/TransformerInspectionsPage.css";
 
@@ -9,56 +10,61 @@ export default function TransformerInspectionsPage({
   setInspections,
   setFilteredInspections,
   onBack,
-  onViewInspection
+  onViewInspection,
 }) {
   const [showAddInspectionModal, setShowAddInspectionModal] = useState(false);
   const [newInspectionForm, setNewInspectionForm] = useState({
-    transformer: transformer.id, // preselect current transformer
+    transformer: transformer.id,
     date: "",
     inspector: "",
-    notes: ""
+    notes: "",
   });
 
-  // --- Helper to get current status based on progress ---
   const getInspectionStatus = (inspection) => {
     const progress = inspection.progressStatus;
-    if (progress) {
+    if (typeof progress === "object" && progress) {
       const { thermalUpload, aiAnalysis, review } = progress;
       if (aiAnalysis === "Completed" && review === "Completed") return "Completed";
       if (thermalUpload === "Completed") return "In Progress";
-    } else if (inspection.maintenanceImage) {
-      // fallback if progressStatus is not defined
-      return "In Progress";
+    } else if (typeof progress === "string") {
+      return progress;
     }
     return "Pending";
   };
 
   const handleDeleteInspection = (id) => {
-    setInspections(prev => prev.filter(i => i.id !== id));
-    setFilteredInspections(prev => prev.filter(i => i.id !== id));
+    axios.delete(`http://localhost:8080/api/inspections/${id}`)
+      .then(() => {
+        setInspections(prev => prev.filter(i => i.id !== id));
+        setFilteredInspections(prev => prev.filter(i => i.id !== id));
+      })
+      .catch(err => console.error("Error deleting inspection:", err));
   };
 
   const handleAddInspection = () => {
+    const transformerId = parseInt(newInspectionForm.transformer, 10);
     const newInspection = {
-      ...newInspectionForm,
-      id: Date.now(),
-      maintenanceImage: null,
-      maintenanceUploadDate: null,
-      maintenanceWeather: "Sunny",
-      progressStatus: {
-        thermalUpload: "Pending",
-        aiAnalysis: "Pending",
-        review: "Pending"
-      }
+      transformer: { id: transformerId },
+      date: newInspectionForm.date,
+      inspector: newInspectionForm.inspector,
+      notes: newInspectionForm.notes,
+      progressStatus: "Pending",
     };
-    setInspections(prev => [...prev, newInspection]);
-    setFilteredInspections(prev => [...prev, newInspection]);
+    axios.post("http://localhost:8080/api/inspections", newInspection)
+      .then(() => {
+        axios.get(`http://localhost:8080/api/inspections/transformer/${transformerId}`)
+          .then(res => {
+            setInspections(prev => [...prev.filter(i => i.transformer.id !== transformerId), ...res.data]);
+            setFilteredInspections(prev => [...prev.filter(i => i.transformer.id !== transformerId), ...res.data]);
+          });
+      })
+      .catch(err => console.error("Error creating inspection:", err));
     setShowAddInspectionModal(false);
     setNewInspectionForm({
       transformer: transformer.id,
       date: "",
       inspector: "",
-      notes: ""
+      notes: "",
     });
   };
 
@@ -66,10 +72,16 @@ export default function TransformerInspectionsPage({
     return `${transformerNumber}-INSP${index + 1}`;
   };
 
-  // --- Update an inspection after viewing/modifying in modal ---
   const handleUpdateInspection = (updatedInspection) => {
-    setInspections(prev => prev.map(i => i.id === updatedInspection.id ? updatedInspection : i));
-    setFilteredInspections(prev => prev.map(i => i.id === updatedInspection.id ? updatedInspection : i));
+    axios.put(`http://localhost:8080/api/inspections/${updatedInspection.id}`, updatedInspection)
+      .then(() => {
+        axios.get(`http://localhost:8080/api/inspections/transformer/${transformer.id}`)
+          .then(res => {
+            setInspections(prev => [...prev.filter(i => i.transformer.id !== transformer.id), ...res.data]);
+            setFilteredInspections(prev => [...prev.filter(i => i.transformer.id !== transformer.id), ...res.data]);
+          });
+      })
+      .catch(err => console.error("Error updating inspection:", err));
   };
 
   return (

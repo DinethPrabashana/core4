@@ -6,7 +6,7 @@ export default function InspectionModal({
   handleInspectionChange,
   handleScheduleInspection,
   onClose,
-  disableTransformerSelect = false, // <-- new prop to control dropdown
+  disableTransformerSelect = false,
 }) {
   return (
     <div className="modal">
@@ -19,7 +19,7 @@ export default function InspectionModal({
             name="transformer"
             value={inspectionForm.transformer}
             onChange={handleInspectionChange}
-            disabled={disableTransformerSelect} // <-- controlled by prop
+            disabled={disableTransformerSelect}
           >
             <option value="">Select Transformer</option>
             {transformers.map((t) => (
@@ -31,7 +31,7 @@ export default function InspectionModal({
         <label>
           Date:
           <input
-            type="date"
+            type="datetime-local"
             name="date"
             value={inspectionForm.date}
             onChange={handleInspectionChange}

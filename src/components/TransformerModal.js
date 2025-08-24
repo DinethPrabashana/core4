@@ -11,7 +11,7 @@ export default function TransformerModal({
   return (
     <div className="modal">
       <div className="modal-content">
-        <h2>Add Transformer</h2>
+        <h2>{formData.id ? "Edit Transformer" : "Add Transformer"}</h2>
 
         <label>Transformer Number</label>
         <input
@@ -58,9 +58,7 @@ export default function TransformerModal({
           <option value="Cloudy">Cloudy</option>
         </select>
 
-        <label>
-          Location
-        </label>
+        <label>Location</label>
         <input
           type="text"
           name="location"

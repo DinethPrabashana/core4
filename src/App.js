@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
 import TransformerList from "./components/TransformerList";
@@ -8,12 +9,6 @@ import InspectionModal from "./components/InspectionModal";
 import InspectionViewModal from "./components/InspectionViewModal";
 import TransformerInspectionsPage from "./components/TransformerInspectionsPage";
 import SettingsPage from "./components/SettingsPage";
-
-import t1 from "./assets/transformer1.png";
-import t2 from "./assets/transformer2.png";
-import t3 from "./assets/transformer3.png";
-import t4 from "./assets/transformer4.png";
-
 import "./App.css";
 
 function App() {
@@ -59,40 +54,24 @@ function App() {
   const [showTransformerInspectionsPage, setShowTransformerInspectionsPage] = useState(false);
   const [selectedTransformerForPage, setSelectedTransformerForPage] = useState(null);
 
-  // --- Load transformers ---
+  // Fetch transformers and inspections on mount
   useEffect(() => {
-    const saved = localStorage.getItem("transformers");
-    if (saved) {
-      try { setTransformers(JSON.parse(saved)); } 
-      catch { setDefaultTransformers(); }
-    } else { setDefaultTransformers(); }
+    axios.get("http://localhost:8080/api/transformers")
+      .then(res => {
+        setTransformers(res.data);
+        setFilteredTransformers(res.data);
+      })
+      .catch(err => console.error("Error fetching transformers:", err));
+
+    axios.get("http://localhost:8080/api/inspections")
+      .then(res => {
+        setInspections(res.data);
+        setFilteredInspections(res.data);
+      })
+      .catch(err => console.error("Error fetching inspections:", err));
   }, []);
 
-  const setDefaultTransformers = () => {
-    const defaultTransformers = [
-      { id: 1, number: "TX-001", pole: "A1", region: "North", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
-      { id: 2, number: "TX-002", pole: "A2", region: "South", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
-      { id: 3, number: "TX-003", pole: "B1", region: "East", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
-      { id: 4, number: "TX-004", pole: "B2", region: "West", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
-    ];
-    setTransformers(defaultTransformers);
-    localStorage.setItem("transformers", JSON.stringify(defaultTransformers));
-  };
-
-  // --- Load inspections ---
-  useEffect(() => {
-    const saved = localStorage.getItem("inspections");
-    if (saved) {
-      try { setInspections(JSON.parse(saved)); } 
-      catch { setInspections([]); }
-    }
-  }, []);
-
-  // --- Save to localStorage ---
-  useEffect(() => { localStorage.setItem("transformers", JSON.stringify(transformers)); }, [transformers]);
-  useEffect(() => { localStorage.setItem("inspections", JSON.stringify(inspections)); }, [inspections]);
-
-  // --- Filtering ---
+  // Filtering transformers
   useEffect(() => {
     setFilteredTransformers(
       transformers.filter(t => {
@@ -103,63 +82,141 @@ function App() {
     );
   }, [searchQueryDetails, searchFieldDetails, transformers]);
 
+  // Filtering inspections
   useEffect(() => {
     setFilteredInspections(
       inspections.filter(i => {
         if (!searchQueryInspection) return true;
         const value =
           searchFieldInspection === "transformer"
-            ? transformers.find(t => t.id === i.transformer)?.number?.toString().toLowerCase() || ""
+            ? transformers.find(t => t.id === i.transformer.id)?.number?.toString().toLowerCase() || ""
             : i[searchFieldInspection]?.toString().toLowerCase() || "";
         return value.includes(searchQueryInspection.toLowerCase());
       })
     );
   }, [searchQueryInspection, searchFieldInspection, inspections, transformers]);
 
-  // --- Transformer handlers ---
+  // Transformer handlers
   const handleTransformerChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === "baselineImage" && files?.[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => setTransformerForm({
-        ...transformerForm,
-        baselineImage: reader.result,
-        baselineUploadDate: new Date().toLocaleString(),
-      });
-      reader.readAsDataURL(files[0]);
-    } else { setTransformerForm({ ...transformerForm, [name]: value }); }
+    setTransformerForm({
+      ...transformerForm,
+      [name]: files ? files[0] : value,
+    });
   };
 
   const openTransformerModal = (t = null) => {
-    if (t) setTransformerForm({ ...t });
+    if (t) setTransformerForm({ ...t, baselineImage: null });
     else setTransformerForm({ id: null, number: "", pole: "", region: "", type: "Bulk", baselineImage: null, baselineUploadDate: null, weather: "", location: "" });
     setShowTransformerModal(true);
   };
 
   const handleAddTransformer = () => {
-    const t = { ...transformerForm, id: transformerForm.id || Date.now() };
-    setTransformers(prev => prev.some(item => item.id === t.id) ? prev.map(item => item.id === t.id ? t : item) : [...prev, t]);
+    const transformerData = {
+      number: transformerForm.number,
+      pole: transformerForm.pole,
+      region: transformerForm.region,
+      type: transformerForm.type,
+      location: transformerForm.location,
+      weather: transformerForm.weather,
+    };
+
+    const form = new FormData();
+    if (transformerForm.baselineImage instanceof File) {
+      form.append("file", transformerForm.baselineImage);
+      form.append("weather", transformerForm.weather);
+    }
+
+    if (transformerForm.id) {
+      // Update transformer
+      axios.put(`http://localhost:8080/api/transformers/${transformerForm.id}`, transformerData)
+        .then(() => {
+          if (form.has("file")) {
+            axios.post(`http://localhost:8080/api/transformers/${transformerForm.id}/upload-baseline`, form, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          }
+          axios.get("http://localhost:8080/api/transformers").then(res => {
+            setTransformers(res.data);
+            setFilteredTransformers(res.data);
+          });
+        })
+        .catch(err => console.error("Error updating transformer:", err));
+    } else {
+      // Create transformer
+      axios.post("http://localhost:8080/api/transformers", transformerData)
+        .then(res => {
+          const newId = res.data.id;
+          if (form.has("file")) {
+            axios.post(`http://localhost:8080/api/transformers/${newId}/upload-baseline`, form, {
+              headers: { "Content-Type": "multipart/form-data" },
+            });
+          }
+          axios.get("http://localhost:8080/api/transformers").then(res => {
+            setTransformers(res.data);
+            setFilteredTransformers(res.data);
+          });
+        })
+        .catch(err => console.error("Error creating transformer:", err));
+    }
     setShowTransformerModal(false);
+    setTransformerForm({ id: null, number: "", pole: "", region: "", type: "Bulk", baselineImage: null, baselineUploadDate: null, weather: "", location: "" });
   };
 
-  // --- Inspection handlers ---
-  const handleInspectionChange = (e) => { setInspectionForm({ ...inspectionForm, [e.target.name]: e.target.value }); };
+  // Inspection handlers
+  const handleInspectionChange = (e) => {
+    setInspectionForm({ ...inspectionForm, [e.target.name]: e.target.value });
+  };
 
   const handleScheduleInspection = () => {
     const transformerId = parseInt(inspectionForm.transformer, 10);
-    const newInspection = { ...inspectionForm, transformer: transformerId, id: Date.now(), maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" };
-    setInspections(prev => [...prev, newInspection]);
+    const newInspection = {
+      transformer: { id: transformerId },
+      date: inspectionForm.date,
+      inspector: inspectionForm.inspector,
+      notes: inspectionForm.notes,
+      progressStatus: "Pending",
+    };
+    axios.post("http://localhost:8080/api/inspections", newInspection)
+      .then(() => {
+        axios.get("http://localhost:8080/api/inspections").then(res => {
+          setInspections(res.data);
+          setFilteredInspections(res.data);
+        });
+      })
+      .catch(err => console.error("Error creating inspection:", err));
     setShowAddInspectionModal(false);
     setInspectionForm({ transformer: "", date: "", inspector: "", notes: "", maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" });
   };
 
-  const handleViewInspection = (inspection) => { setViewInspectionData(inspection); setShowViewInspectionModal(true); };
+  const handleViewInspection = (inspection) => {
+    setViewInspectionData(inspection);
+    setShowViewInspectionModal(true);
+  };
 
-  const handleUpdateInspection = (updatedInspection) => { setInspections(inspections.map(i => (i.id === updatedInspection.id ? updatedInspection : i))); };
+  const handleUpdateInspection = (updatedInspection) => {
+    axios.put(`http://localhost:8080/api/inspections/${updatedInspection.id}`, updatedInspection)
+      .then(() => {
+        axios.get("http://localhost:8080/api/inspections").then(res => {
+          setInspections(res.data);
+          setFilteredInspections(res.data);
+        });
+      })
+      .catch(err => console.error("Error updating inspection:", err));
+  };
 
-  const handleUpdateTransformer = (updatedTransformer) => { setTransformers(prev => prev.map(t => (t.id === updatedTransformer.id ? updatedTransformer : t))); };
+  const handleUpdateTransformer = (updatedTransformer) => {
+    axios.put(`http://localhost:8080/api/transformers/${updatedTransformer.id}`, updatedTransformer)
+      .then(() => {
+        axios.get("http://localhost:8080/api/transformers").then(res => {
+          setTransformers(res.data);
+          setFilteredTransformers(res.data);
+        });
+      })
+      .catch(err => console.error("Error updating transformer:", err));
+  };
 
-  // --- Full-page inspection handlers ---
+  // Full-page inspection handlers
   const handleOpenTransformerInspectionsPage = (transformer) => {
     setSelectedTransformerForPage(transformer);
     setShowTransformerInspectionsPage(true);
@@ -169,10 +226,17 @@ function App() {
     setShowTransformerInspectionsPage(false);
   };
 
-  // --- Clear Local Storage handler ---
+  // Clear data (optional: could delete all via API if needed)
   const handleClearLocalStorage = () => {
-    localStorage.clear();
-    window.location.reload(); // reload app to reset default data
+    axios.delete("http://localhost:8080/api/transformers")
+      .then(() => axios.delete("http://localhost:8080/api/inspections"))
+      .then(() => {
+        setTransformers([]);
+        setFilteredTransformers([]);
+        setInspections([]);
+        setFilteredInspections([]);
+      })
+      .catch(err => console.error("Error clearing data:", err));
   };
 
   return (
@@ -184,7 +248,7 @@ function App() {
         ) : showTransformerInspectionsPage && selectedTransformerForPage ? (
           <TransformerInspectionsPage
             transformer={selectedTransformerForPage}
-            inspections={inspections.filter(i => i.transformer === selectedTransformerForPage.id)}
+            inspections={inspections.filter(i => i.transformer.id === selectedTransformerForPage.id)}
             setInspections={setInspections}
             setFilteredInspections={setFilteredInspections}
             transformers={transformers}
@@ -244,7 +308,7 @@ function App() {
           handleInspectionChange={handleInspectionChange}
           handleScheduleInspection={handleScheduleInspection}
           onClose={() => setShowAddInspectionModal(false)}
-          disableTransformerSelect={false} // dropdown enabled here
+          disableTransformerSelect={false}
         />
       )}
 
