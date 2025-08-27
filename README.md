@@ -37,4 +37,7 @@ This application helps teams streamline their transformer maintenance and inspec
 
 ---
 
+
+
+-----
 ## Project Architecture
