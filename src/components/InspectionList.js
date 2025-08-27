@@ -88,7 +88,7 @@ const latestMaintenanceDate = pending.length
           <tr style={{ backgroundColor: "#02090fff", color: "white" }}>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Transformer</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Maintenance Date</th>
-            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Inspected Date</th>
+            <th style={{ border: "1px solid #ddd", padding: "10px" }}>Last Inspected Date</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Total Inspections</th>
             <th style={{ border: "1px solid #ddd", padding: "10px" }}>Actions</th>
           </tr>

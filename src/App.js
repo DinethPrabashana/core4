@@ -56,48 +56,52 @@ function App() {
   const [searchFieldInspection, setSearchFieldInspection] = useState("");
   const [searchQueryInspection, setSearchQueryInspection] = useState("");
 
-  // Full-page inspection view
   const [showTransformerInspectionsPage, setShowTransformerInspectionsPage] = useState(false);
   const [selectedTransformerForPage, setSelectedTransformerForPage] = useState(null);
 
-  // --- Toggle to decide whether to load default transformers ---
-  const LOAD_DEFAULT_TRANSFORMERS = true; // <-- set to true if you want default data
+  // --- Add default transformers toggle ---
+  const ADD_DEFAULT_ENTRY = true; // set false to skip default transformers
+
+  // --- Default transformers ---
+  const DEFAULT_TRANSFORMERS = [
+    { id: 1, number: "TX-001", pole: "A1", region: "Ragama", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
+    { id: 2, number: "TX-002", pole: "A2", region: "Gampaha", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
+    { id: 3, number: "TX-003", pole: "B1", region: "Nugegoda", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
+    { id: 4, number: "TX-004", pole: "B2", region: "Colombo", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
+    { id: 5, number: "TX-005", pole: "C1", region: "Kalaniya", type: "Distribution", baselineImage: t5, baselineUploadDate: null, weather: "Cloudy", location: "Site 5" },
+  ];
 
   // --- Load transformers ---
   useEffect(() => {
-    const saved = localStorage.getItem("transformers");
-    if (saved) {
-      try {
-        setTransformers(JSON.parse(saved));
-      } catch {
-        if (LOAD_DEFAULT_TRANSFORMERS) setDefaultTransformers();
-        else setTransformers([]);
-      }
-    } else if (LOAD_DEFAULT_TRANSFORMERS) {
-      setDefaultTransformers();
+    let savedTransformers = [];
+    try {
+      savedTransformers = JSON.parse(localStorage.getItem("transformers")) || [];
+    } catch {
+      savedTransformers = [];
     }
+
+    let allTransformers = savedTransformers;
+
+    if (ADD_DEFAULT_ENTRY) {
+      // Add default transformers only if not already present
+      const existingIds = new Set(savedTransformers.map(t => t.id));
+      const transformersToAdd = DEFAULT_TRANSFORMERS.filter(t => !existingIds.has(t.id));
+      allTransformers = [...transformersToAdd, ...savedTransformers];
+    }
+
+    setTransformers(allTransformers);
+    localStorage.setItem("transformers", JSON.stringify(allTransformers));
   }, []);
-
-  const setDefaultTransformers = () => {
-    const defaultTransformers = [
-      { id: 1, number: "TX-001", pole: "A1", region: "Ragama", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
-      { id: 2, number: "TX-002", pole: "A2", region: "Gampaha", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
-      { id: 3, number: "TX-003", pole: "B1", region: "Nugegoda", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
-      { id: 4, number: "TX-004", pole: "B2", region: "Colombo", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
-      { id: 5, number: "TX-005", pole: "C1", region: "Kalaniya", type: "Distribution", baselineImage: t5, baselineUploadDate: null, weather: "Cloudy", location: "Site 5" },
-
-    ];
-    setTransformers(defaultTransformers);
-    localStorage.setItem("transformers", JSON.stringify(defaultTransformers));
-  };
 
   // --- Load inspections ---
   useEffect(() => {
-    const saved = localStorage.getItem("inspections");
-    if (saved) {
-      try { setInspections(JSON.parse(saved)); } 
-      catch { setInspections([]); }
+    let savedInspections = [];
+    try {
+      savedInspections = JSON.parse(localStorage.getItem("inspections")) || [];
+    } catch {
+      savedInspections = [];
     }
+    setInspections(savedInspections);
   }, []);
 
   // --- Save to localStorage ---
@@ -166,26 +170,15 @@ function App() {
   };
 
   const handleViewInspection = (inspection) => { setViewInspectionData(inspection); setShowViewInspectionModal(true); };
-
   const handleUpdateInspection = (updatedInspection) => { setInspections(inspections.map(i => (i.id === updatedInspection.id ? updatedInspection : i))); };
-
   const handleUpdateTransformer = (updatedTransformer) => { setTransformers(prev => prev.map(t => (t.id === updatedTransformer.id ? updatedTransformer : t))); };
 
   // --- Full-page inspection handlers ---
-  const handleOpenTransformerInspectionsPage = (transformer) => {
-    setSelectedTransformerForPage(transformer);
-    setShowTransformerInspectionsPage(true);
-  };
-  const handleBackToMain = () => {
-    setSelectedTransformerForPage(null);
-    setShowTransformerInspectionsPage(false);
-  };
+  const handleOpenTransformerInspectionsPage = (transformer) => { setSelectedTransformerForPage(transformer); setShowTransformerInspectionsPage(true); };
+  const handleBackToMain = () => { setSelectedTransformerForPage(null); setShowTransformerInspectionsPage(false); };
 
   // --- Clear Local Storage handler ---
-  const handleClearLocalStorage = () => {
-    localStorage.clear();
-    window.location.reload(); // reload app to reset default data
-  };
+  const handleClearLocalStorage = () => { localStorage.clear(); window.location.reload(); };
 
   return (
     <div className="app">
@@ -256,7 +249,7 @@ function App() {
           handleInspectionChange={handleInspectionChange}
           handleScheduleInspection={handleScheduleInspection}
           onClose={() => setShowAddInspectionModal(false)}
-          disableTransformerSelect={false} // dropdown enabled here
+          disableTransformerSelect={false}
         />
       )}
 
