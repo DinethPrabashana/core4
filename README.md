@@ -35,7 +35,7 @@ This application helps teams streamline their transformer maintenance and inspec
 
 2. **Install dependencies:**
 
-`npm install`
+   `npm install`
 
 **(optional)** Configure default transformer behavior:
 Set the `add_default_entry` variable in the App.js script:
@@ -46,7 +46,7 @@ Set the `add_default_entry` variable in the App.js script:
 
 3. **Start the development server:**
 
-`npm start`
+   `npm start`
 
 
 
