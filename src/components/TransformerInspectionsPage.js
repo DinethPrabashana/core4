@@ -88,7 +88,7 @@ export default function TransformerInspectionsPage({
         <thead>
           <tr>
             <th>Inspection No</th>
-            <th>Inspection Date</th>
+            <th>Maintenance Date</th>
             <th>Maintenance Info</th>
             <th>Status</th>
             <th>Actions</th>
