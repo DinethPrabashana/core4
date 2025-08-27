@@ -1,70 +1,97 @@
-# Getting Started with Create React App
+# Transformer Management (React + Spring Boot)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This repository contains a React frontend and a Spring Boot backend for managing transformers and inspections. The frontend (`/src`) communicates with the backend (`transformer-backend/`) over REST APIs. The backend persists data to a PostgreSQL database.
 
-## Available Scripts
+## Repository layout
 
-In the project directory, you can run:
+- `transformer-backend/` — Spring Boot application (Java, Maven)
+- `src/` — React frontend (Create React App)
+- `uploads/` — (runtime) uploaded images saved by the backend
 
-### `npm start`
+## Key integration notes
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- The React app calls backend endpoints under `http://localhost:8080/api/...` (for example `GET /api/transformers`).
+- Backend stores entities (Transformer, Inspection) in PostgreSQL via Spring Data JPA. Configure DB connection in `transformer-backend/src/main/resources/application.properties`.
+- File uploads (baseline/maintenance images) are saved to the `uploads/` folder by the backend and served from `/uploads/`.
+- If the browser blocks requests due to CORS, enable CORS in the backend (there is a `WebConfig` class you can update) or configure a proxy for development.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## Prerequisites
 
-### `npm test`
+- Java 11+ (or the Java version specified in `transformer-backend/pom.xml`)
+- Maven 3.6+
+- Node.js (16+) and npm
+- PostgreSQL server
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## PostgreSQL setup (example)
 
-### `npm run build`
+1. Create a database and user for the application (adjust names/credentials as desired):
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```ps1
+REM Windows (cmd/powershell) example using psql
+psql -U postgres -c "CREATE DATABASE transformer_db;"
+psql -U postgres -c "CREATE USER transformer_user WITH PASSWORD 'password';"
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE transformer_db TO transformer_user;"
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+2. Edit `transformer-backend/src/main/resources/application.properties` and set:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/transformer_db
+spring.datasource.username=transformer_user
+spring.datasource.password=password
+spring.jpa.hibernate.ddl-auto=update
+app.upload.dir=uploads
+```
 
-### `npm run eject`
+Note: `spring.jpa.hibernate.ddl-auto=update` will create/update tables automatically during development. For production use, prefer controlled migrations.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## Run the backend
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Open a terminal, change into the backend folder, and run with Maven. The backend listens on port 8080 by default; you can also pass the port as an argument.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```cmd
+cd transformer-backend
+mvn clean package
+mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8080
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Alternatively run the packaged jar:
 
-## Learn More
+```cmd
+cd transformer-backend
+mvn package
+java -jar target/transformer-backend-0.0.1-SNAPSHOT.jar --server.port=8080
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Watch the backend logs for startup and for any database connection errors.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Run the frontend (development)
 
-### Code Splitting
+In a separate terminal run:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```cmd
+cd C:\Users\USER\Desktop\SDC\core4
+npm install
+npm start
+```
 
-### Analyzing the Bundle Size
+The React dev server runs on port 3000 by default and makes API calls to `http://localhost:8080`. Ensure the backend is running first.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+## Full-app workflow
 
-### Making a Progressive Web App
+1. Start PostgreSQL and ensure the database credentials in `application.properties` are correct.
+2. Start the backend (see steps above) so it is reachable at `http://localhost:8080`.
+3. Start the frontend with `npm start` and open `http://localhost:3000`.
+4. Use the UI to create transformers and inspections; images uploaded from the UI are POSTed to the Spring Boot endpoints and saved under `uploads/`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## Troubleshooting
 
-### Advanced Configuration
+- CORS errors: enable cross-origin requests in the backend (check `WebConfig`) or set up a proxy in the React app.
+- DB connection errors: confirm PostgreSQL is running, the DB/user exist, and `application.properties` credentials match.
+- Port in use: change `--server.port` argument when running backend or adjust frontend port (React will prompt to use another port).
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## Notes
 
-### Deployment
+- This README focuses on running the integrated app locally. For deployment, production DB configuration, and secure credentials, follow your infrastructure/security practices.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+If you want, I can add a short troubleshooting section that includes common console errors and how to fix them, or add a dev-only `application-dev.properties` example. Tell me which you'd prefer.
