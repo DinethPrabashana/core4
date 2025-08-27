@@ -1,6 +1,8 @@
+
+
 # Transformer Inspection Management System
 
-A web-based application designed to manage transformer inspections, maintenance scheduling, and progress tracking efficiently. The system ensures that inspection records are properly updated, and when an inspection is marked as complete, the inspected date automatically reflects the recorded maintenance date.
+A web-based platform for power utilities to manage transformer inspections efficiently. The system enables automated detection of thermal anomalies, centralized management of transformer records and thermal images, and generation of digital maintenance records. It improves inspection accuracy, reduces manual effort, and ensures traceability across all inspection phases.
 
 ---
 
@@ -11,10 +13,6 @@ A web-based application designed to manage transformer inspections, maintenance 
 - [Project Architecture](#project-architecture)
 - [Default Transformer Entries](#default-transformer-entries)
 - [Usage Guide](#usage-guide)
-- [Available Scripts](#available-scripts)
-- [Deployment](#deployment)
-- [Technologies Used](#technologies-used)
-- [License](#license)
 
 ---
 
@@ -28,118 +26,86 @@ This application helps teams streamline their transformer maintenance and inspec
 
 ---
 
-## Setup Instructions  🚀 **(Start Here)**
+## Setup Instructions
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/DinethPrabashana/core4.git
    cd transformer-management-system
 
-Install dependencies:
+2. **Install dependencies:**
 
-npm install
+`npm install`
 
-Configure default transformer behavior (optional):
-Set the add_default_entry variable in the initialization script:
+**(optional)** Configure default transformer behavior:
+Set the `add_default_entry` variable in the App.js script:
 
     true – preload sample transformers
 
     false – start with an empty database
 
-Start the development server:
+3. **Start the development server:**
 
-npm start
+`npm start`
 
-Features
 
-    Inspection Management: Add, view, edit, and delete inspections.
 
-    Progress Tracking: Monitor inspections and update their completion status.
+## Data & Storage Usage
 
-    Automated Date Handling: Automatically sets the inspected date to match the maintenance date upon completion.
+### Local Storage
+The current version uses browser `localStorage` to persist transformer and inspection data between sessions.
 
-    Search and Filter: Quickly find inspections based on transformer details or progress.
+- Inspection records, transformer lists, and their states are stored locally.
+- This ensures fast loading and offline-friendly operation.
 
-    Responsive UI: Works seamlessly on desktops and tablets.
+### Default Entries
+A configuration variable (`add_default_entry`) controls whether default transformer data should be preloaded.
 
-Project Architecture
+- `true`: Loads predefined transformers.
+- `false`: Starts with an empty database.
 
-The project follows a modular React architecture to keep the code organized and scalable:
+### Future Plan – Database Integration
+We aim to migrate from local storage to a structured database (e.g., SQL-based) in the next phase.
 
-transformer-management-system/
-├── src/
-│   ├── components/
-│   │   ├── InspectionList/          # Displays all inspections for selected transformers
-│   │   ├── InspectionModal/         # Add/edit inspection form
-│   │   ├── InspectionViewModal/     # View details and complete inspection
-│   │   ├── SettingsPage/            # Application settings
-│   │   ├── Sidebar/                 # Sidebar navigation
-│   │   ├── Tabs/                    # Tab navigation for sections
-│   │   ├── TransformerInspectionsPage/ # Combined transformer + inspections view
-│   │   ├── TransformerList/         # List and manage transformers
-│   │   └── TransformerModal/        # Add/edit transformer form
-│   ├── App.js                       # Main application entry
-│   └── styles/                      # CSS files
-└── README.md
+- This will enable multi-user access, centralized data management, and improved scalability.
+- The planned backend will synchronize transformer and inspection data securely.
 
-Data & Storage Usage
+---
 
-    Local Storage:
-    The current version uses browser localStorage to persist transformer and inspection data between sessions.
-
-        Inspection records, transformer lists, and their states are stored locally.
-
-        This ensures fast loading and offline-friendly operation.
-
-    Default Entries:
-    A configuration variable (add_default_entry) controls whether default transformer data should be preloaded.
-
-        true: Loads predefined transformers.
-
-        false: Starts with an empty database.
-
-    Future Plan – Database Integration:
-    We aim to migrate from local storage to a structured database (e.g., SQL-based) in the next phase.
-
-        This will enable multi-user access, centralized data management, and improved scalability.
-
-        The planned backend will synchronize transformer and inspection data securely.
-
-Default Transformer Entries
-
+## Default Transformer Entries
 This application supports optional default transformers to help with quick setup and testing during the initial phase.
 
-    Controlled via the configuration variable: add_default_entry
+- **Controlled via** the configuration variable: `add_default_entry`
+- **Located in** the App.js file
 
-    Located in the project configuration or initialization file (typically where data is initialized)
+**When enabled (`true`)**:
 
-    When enabled (true):
+- Preloads a predefined list of transformers into the application.
+- Useful for demonstrations, quick prototyping, or testing.
 
-        Preloads a predefined list of transformers into the application.
+**When disabled (`false`)**:
 
-        Useful for demonstrations, quick prototyping, or testing.
+- Starts with an empty transformer list.
+- Suitable for production environments where only real transformer data should be added manually.
 
-    When disabled (false):
+> **Note:** This behavior only affects the initial load of the application. Once custom data is added, it will persist in the browser `localStorage` until cleared or replaced.
 
-        Starts with an empty transformer list.
 
-        Suitable for production environments where only real transformer data should be added manually.
+## Usage Guide
 
-    Note: This behavior only affects the initial load of the application. Once custom data is added, it will persist in the browser localStorage until cleared or replaced.
+1. Open the app in your browser (default: [http://localhost:3000](http://localhost:3000)).
+2. Use the sidebar to navigate between:
+   - **Transformers**
+   - **Settings**
+3. In the **Transformers** tab:
+   - There are two sub-buttons:
+     - **Transformers** – View and manage transformer records.
+     - **Inspections** – View transformer inspection summaries.
+   - **Add Transformer** button – Add a new transformer record.
+4. In the **Inspections** view:
+   - Displays a list of all transformers with their total number of inspections.
+   - Clicking on a transformer shows detailed inspection records for that transformer.
+5. Add or edit transformers and inspections as needed.
+6. Mark inspections as complete to automatically sync the inspected date with the maintenance date.
 
-Usage Guide
-
-    Open the app in your browser (default: http://localhost:3000)
-
-    Use the sidebar to navigate between:
-
-        Transformer List
-
-        Inspections
-
-        Settings
-
-    Add or edit transformers and inspections as needed.
-
-    Mark inspections as complete to automatically sync the inspected date with the maintenance date.
 
