@@ -2,10 +2,14 @@ import React, { useState, useEffect } from "react";
 import '../style/InspectionViewModal.css';
 import ThermalImageComparison from "./ThermalImageComparison";
 import ErrorLog from "./ErrorLog";
+import ErrorRuleset from "./ErrorRuleSet";
 
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection, updateTransformer }) {
   const transformer = transformers.find(t => t.id === inspection.transformer);
   const uploader = "Admin";
+
+  // --- Lift threshold state from ErrorRuleSet ---
+  const [threshold, setThreshold] = useState(0.5);
 
   // --- Local state for Baseline Image ---
   const [baselineImage, setBaselineImage] = useState(inspection.baselineImage || transformer?.baselineImage || null);
@@ -73,33 +77,58 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   // --- Local anomalies for immediate rendering ---
   const [localAnomalies, setLocalAnomalies] = useState(inspection.anomalies || []);
 
-  // --- Complete button handler ---
-  const handleComplete = () => {
-    const boxes = [
-      { x: 50, y: 40, width: 100, height: 80 },
-      { x: 200, y: 120, width: 60, height: 60 }
-    ];
+  // --- Complete button handler (Start Analysis) ---
+const handleComplete = async () => {
+  const boxes = [
+    { x: 50, y: 40, width: 100, height: 80 },
+    { x: 200, y: 120, width: 60, height: 60 }
+  ];
 
-    setLocalAnomalies(boxes); // <-- immediate rendering
+  setLocalAnomalies(boxes);
 
-    const updatedInspection = {
-      ...inspection,
-      status: "Completed",
-      inspectedDate: inspection.date, // Use scheduled maintenance date
-      date: null, // Clear maintenance date
-      progressStatus: {
-        thermalUpload: "Completed",
-        aiAnalysis: "Completed",
-        review: "Completed"
-      },
-      anomalies: boxes // <-- save anomalies permanently
-    };
+  try {
+    const formData = new FormData();
+    formData.append("threshold", threshold); // must be a string or number
+    if (maintenanceImage instanceof File) {      // check it's a File
+      formData.append("image", maintenanceImage);
+    }
 
-    setProgressStatus(updatedInspection.progressStatus);
-    setIsCompleted(true);
+    const response = await fetch("http://127.0.0.1:32003/analyze", {
+      method: "POST",
+      body: formData
+    });
 
-    if (updateInspection) updateInspection(updatedInspection);
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("Server error:", text);
+      return;
+    }
+
+    const result = await response.json();
+    console.log("AI Analysis Result:", result);
+  } catch (err) {
+    console.error("Error calling AI server:", err);
+  }
+
+  // Update inspection status
+  const updatedInspection = {
+    ...inspection,
+    status: "Completed",
+    inspectedDate: inspection.date,
+    date: null,
+    progressStatus: {
+      thermalUpload: "Completed",
+      aiAnalysis: "Completed",
+      review: "Completed"
+    },
+    anomalies: boxes
   };
+
+  setProgressStatus(updatedInspection.progressStatus);
+  setIsCompleted(true);
+
+  if (updateInspection) updateInspection(updatedInspection);
+};
 
   // --- Handlers ---
   const handleBaselineUpload = (e) => {
@@ -139,23 +168,18 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
     }
   };
 
-  const handleMaintenanceUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setMaintenanceImage(reader.result);
-        setLocalMaintenanceChanged(true);
-
-        setProgressStatus({
-          thermalUpload: "Completed",
-          aiAnalysis: "In Progress",
-          review: "In Progress"
-        });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
+const handleMaintenanceUpload = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    setMaintenanceImage(file); // store File object directly
+    setLocalMaintenanceChanged(true);
+    setProgressStatus({
+      thermalUpload: "Completed",
+      aiAnalysis: "In Progress",
+      review: "In Progress"
+    });
+  }
+};
 
   const handleSave = () => {
     if (updateInspection) {
@@ -170,7 +194,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         progressStatus,
         inspectedDate: isCompleted ? inspection.date : inspection.inspectedDate,
         status: isCompleted ? "Completed" : inspection.status,
-        anomalies: localAnomalies // <-- persist anomalies
+        anomalies: localAnomalies
       });
     }
     onClose();
@@ -223,7 +247,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
               <label>
                 Weather:
                 <select value={baselineWeather} onChange={e => setBaselineWeather(e.target.value)} disabled={!baselineImage}>
-                  {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
+                  {["Sunny", "Rainy", "Cloudy"].map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               </label>
             </div>
@@ -248,27 +272,29 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
             <label>
               Weather:
               <select value={maintenanceWeather} onChange={e => setMaintenanceWeather(e.target.value)}>
-                {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
+                {["Sunny", "Rainy", "Cloudy"].map(w => <option key={w} value={w}>{w}</option>)}
               </select>
             </label>
           </div>
         </div>
 
         {baselineImageURL && maintenanceImageURL && (
-        <ThermalImageComparison
-          baselineImageURL={baselineImageURL}
-          maintenanceImageURL={maintenanceImageURL}
-          baselineUploadDate={baselineUploadDate}
-          baselineWeather={baselineWeather}
-          maintenanceWeather={maintenanceWeather}
-          inspectionDate={inspection.date}
-          uploader={uploader}
-          onComplete={handleComplete}
-          anomalies={localAnomalies} // <-- use local anomalies for immediate drawing
-        />
-      )}
+          <ThermalImageComparison
+            baselineImageURL={baselineImageURL}
+            maintenanceImageURL={maintenanceImageURL}
+            baselineUploadDate={baselineUploadDate}
+            baselineWeather={baselineWeather}
+            maintenanceWeather={maintenanceWeather}
+            inspectionDate={inspection.date}
+            uploader={uploader}
+            onComplete={handleComplete}
+            anomalies={localAnomalies}
+          />
+        )}
 
-      <ErrorLog anomalies={localAnomalies} />
+        <ErrorLog anomalies={localAnomalies || []} />
+        {/* Pass threshold state to ErrorRuleset */}
+        <ErrorRuleset threshold={threshold} setThreshold={setThreshold} />
 
         {showBaselinePreview && baselineImageURL && (
           <div className="modal-overlay">
