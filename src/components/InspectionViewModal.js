@@ -67,10 +67,20 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   );
 
   // --- Track completion ---
-  const [isCompleted, setIsCompleted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(inspection.status === "Completed");
+
+  // --- Local anomalies for immediate rendering ---
+  const [localAnomalies, setLocalAnomalies] = useState(inspection.anomalies || []);
 
   // --- Complete button handler ---
   const handleComplete = () => {
+    const boxes = [
+      { x: 50, y: 40, width: 100, height: 80 },
+      { x: 200, y: 120, width: 60, height: 60 }
+    ];
+
+    setLocalAnomalies(boxes); // <-- immediate rendering
+
     const updatedInspection = {
       ...inspection,
       status: "Completed",
@@ -80,10 +90,12 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         thermalUpload: "Completed",
         aiAnalysis: "Completed",
         review: "Completed"
-      }
+      },
+      anomalies: boxes // <-- save anomalies permanently
     };
+
     setProgressStatus(updatedInspection.progressStatus);
-    setIsCompleted(true); // mark as completed
+    setIsCompleted(true);
 
     if (updateInspection) updateInspection(updatedInspection);
   };
@@ -155,8 +167,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         maintenanceWeather,
         maintenanceUploadDate,
         progressStatus,
-        inspectedDate: isCompleted ? inspection.date : inspection.inspectedDate, // Only update if completed
-        status: progressStatus.thermalUpload === "Completed" && isCompleted ? "Completed" : inspection.status
+        inspectedDate: isCompleted ? inspection.date : inspection.inspectedDate,
+        status: isCompleted ? "Completed" : inspection.status,
+        anomalies: localAnomalies // <-- persist anomalies
       });
     }
     onClose();
@@ -250,10 +263,7 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           inspectionDate={inspection.date}
           uploader={uploader}
           onComplete={handleComplete}
-           anomalies={[
-            { x: 50, y: 40, width: 100, height: 80 },
-            { x: 200, y: 120, width: 60, height: 60 }
-  ]}
+          anomalies={localAnomalies} // <-- use local anomalies for immediate drawing
         />
       )}
 

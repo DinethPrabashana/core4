@@ -40,6 +40,8 @@ export default function ThermalImageComparison({
           <h4>Thermal Image</h4>
           <div className="image-box" style={{ position: "relative" }}>
             <img src={maintenanceImageURL} alt="Thermal" style={{ width: "100%" }} />
+            
+            {/* Overlay anomalies */}
             {anomalies.map((box, idx) => (
               <div
                 key={idx}
@@ -54,14 +56,28 @@ export default function ThermalImageComparison({
                 }}
               />
             ))}
+
+            {/* Zoom button at bottom-right */}
+            <button 
+              onClick={() => setShowModal(true)}
+              style={{
+                position: "absolute",
+                bottom: "10px",
+                right: "10px",
+                padding: "6px 12px",
+                fontSize: "0.9rem",
+                borderRadius: "4px",
+                backgroundColor: "#715fbdff",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              🔍
+            </button>
           </div>
 
-          {/* Zoom Button */}
-          <div style={{ marginTop: "5px" }}>
-            <button onClick={() => setShowModal(true)}>Zoom</button>
-          </div>
-
-          <div className="image-info">
+          {/* Image info below the image */}
+          <div className="image-info" style={{ marginTop: "5px" }}>
             <p><strong>Date & Time:</strong> {inspectionDate || "N/A"}</p>
             <p><strong>Weather:</strong> {maintenanceWeather}</p>
             <p><strong>Uploader:</strong> {uploader}</p>
@@ -71,8 +87,8 @@ export default function ThermalImageComparison({
       </div>
 
       {onComplete && (
-        <div className="complete-button-container">
-          <button className="inspection-complete-btn" onClick={onComplete}>Complete</button>
+        <div className="complete-button-container" style={{ marginTop: "10px" }}>
+          <button className="inspection-complete-btn" onClick={onComplete}>Start Analysis</button>
         </div>
       )}
 
