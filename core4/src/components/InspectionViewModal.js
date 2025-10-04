@@ -75,16 +75,13 @@ export default function InspectionViewModal({
   const handleComplete = async () => {
     const updatedInspection = {
       ...inspection,
-      // Persist current state first
-      // baselineImage, // Do not save large image data to localStorage
-      maintenanceImage: maintenanceImage,
-      annotatedImage: annotatedImage,
+      maintenanceImage,
+      annotatedImage,
       baselineWeather,
       baselineUploadDate,
       maintenanceWeather,
       maintenanceUploadDate,
-      anomalies: anomalies,
-      // annotatedImage, // Do not save large image data to localStorage
+      anomalies,
       // Then update status to complete
       status: "Completed",
       inspectedDate: inspection.date,
@@ -138,15 +135,29 @@ export default function InspectionViewModal({
   // Delete (mark deleted) or restore
   const handleDeleteAnomaly = (id) => {
     const anomalyToDelete = anomalies.find(a => a.id === id);
-    if (anomalyToDelete && anomalyToDelete.source === 'ai') {
-      const reason = prompt("Please provide a reason for deleting this AI-detected anomaly:");
-      if (reason) setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true, comment: `Deleted by user. Reason: ${reason}` } : a));
-    } else setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true } : a));
+    if (!anomalyToDelete) return;
+
+    if (anomalyToDelete.source === 'ai') {
+      // For AI anomalies, a comment (reason) is required for deletion.
+      if (!anomalyToDelete.comment || anomalyToDelete.comment.trim() === '') {
+        alert('Please provide a reason in the "Comment" field before deleting an AI-detected anomaly.');
+        return;
+      }
+    }
+    // For both AI (with reason) and Manual anomalies, mark as deleted.
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true } : a));
   };
   const handleRestoreAnomaly = (id) => {
     setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: false } : a));
   };
   // --- Save handler (will also save annotations if present) ---
+  const handleManualSeverityChange = (id, newSeverity) => {
+    setAnomalies(prev => prev.map(a =>
+        (a.id === id && a.source === 'user')
+            ? { ...a, severity: newSeverity }
+            : a
+    ));
+  };
   const handleManualClassificationChange = (id, newClassification) => {
     setAnomalies(prev => prev.map(a =>
         (a.id === id && a.source === 'user')
@@ -154,6 +165,7 @@ export default function InspectionViewModal({
             : a
     ));
   };
+  const manualSeverityOptions = ["Faulty", "Potentially Faulty", "Normal"];
   const manualClassificationOptions = ["Loose Joint", "Point Overload", "Full Wire Overload", "Other"];
 
   const handleSave = async () => {
@@ -161,14 +173,14 @@ export default function InspectionViewModal({
     if (updateInspection) {
       updateInspection({
         ...inspection,
-        maintenanceImage: maintenanceImage,
-        annotatedImage: annotatedImage, // Persist the annotated image
+        maintenanceImage,
+        annotatedImage, // Persist the annotated image
         baselineWeather,
         baselineUploadDate,
         maintenanceWeather,
         maintenanceUploadDate,
         progressStatus,
-        anomalies: anomalies, // Save anomalies
+        anomalies, // Save anomalies
         inspectedDate: isCompleted ? inspection.date : inspection.inspectedDate,
         status: progressStatus.thermalUpload === "Completed" && isCompleted ? "Completed" : inspection.status
       });
@@ -377,7 +389,7 @@ export default function InspectionViewModal({
       const newAnom = {
         id: `user_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
         x, y, w: width, h: height,
-        confidence: null,
+        severity: '', // Default empty severity for dropdown
         classification: '', // Default empty classification for dropdown
         severity: null,
         comment: '',
@@ -646,8 +658,9 @@ export default function InspectionViewModal({
               <thead>
                 <tr>
                   <th>#</th>
+                  <th>Source</th>
+                  <th>Severity</th>
                   <th>Classification</th>
-                  <th>Details</th>
                   <th>Comment</th>
                   <th>Actions</th>
                 </tr>
@@ -660,15 +673,22 @@ export default function InspectionViewModal({
                     <td>
                       {a.source === 'ai' ? (
                         <span className={`severity-badge ${a.severity?.toLowerCase()}`}>
-                          {a.severity}
+                          {a.severity || 'N/A'}
                         </span>
                       ) : (
-                        <span className="severity-badge manual">Manual</span>
+                        <select
+                          value={a.severity || ''}
+                          onChange={(e) => handleManualSeverityChange(a.id, e.target.value)}
+                          className="log-classification-select"
+                        >
+                          <option value="" disabled>Select...</option>
+                          {manualSeverityOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                        </select>
                       )}
                     </td>
                     <td>
                       {a.source === 'ai' ? (
-                        <span>{a.classification}</span>
+                        <span>{a.classification || 'N/A'}</span>
                       ) : (
                         <select
                           value={a.classification || ''}
