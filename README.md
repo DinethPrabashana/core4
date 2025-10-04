@@ -1,92 +1,106 @@
+# Thermal Image Anomaly Detection System
 
+This project is a web-based application designed for the inspection of electrical transformers using thermal imaging. It leverages an AI-powered backend to analyze thermal images against a baseline, automatically detecting and classifying potential faults like loose joints and overloads.
 
-# Transformer Inspection Management System
-
-A web-based platform for power utilities to manage transformer inspections efficiently. The system enables automated detection of thermal anomalies, centralized management of transformer records and thermal images, and generation of digital maintenance records. It improves inspection accuracy, reduces manual effort, and ensures traceability across all inspection phases.
-
----
-
-## Table of Contents
-- [Overview](#overview)
-- [Setup Instructions](#setup-instructions)
-- [Features](#features)
-- [Project Architecture](#project-architecture)
-- [Default Transformer Entries](#default-transformer-entries)
-- [Usage Guide](#usage-guide)
+The user-friendly interface allows inspectors to upload images, review AI-generated analysis, add their own manual annotations, and generate a comprehensive inspection report.
 
 ---
 
-## Overview
+## Key Features
 
-This application helps teams streamline their transformer maintenance and inspection processes. It provides a centralized interface to:
-- Create and manage inspection entries.
-- Track progress and mark inspections as completed.
-- Automatically synchronize maintenance dates with inspected dates when inspections are completed.
-- View, edit, and delete inspection entries with ease.
-
----
-
-## Setup Instructions
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/DinethPrabashana/core4.git
-   cd core4
-
-2. **Install dependencies:**
-
-   `npm install`
-
-3. **Start the development server:**
-
-   `npm start`
-
-
-
-## Usage Guide
-
-1. Open the app in your browser (default: [http://localhost:3000](http://localhost:3000)).
-2. Use the sidebar to navigate between:
-   - **Transformers**
-   - **Settings**
-3. In the **Transformers** tab:
-   - There are two sub-buttons:
-     - **Transformers** – View and manage transformer records.
-     - **Inspections** – View transformer inspection summaries.
-   - **Add Transformer** button – Add a new transformer record.
-4. In the **Inspections** view:
-   - Displays a list of all transformers with their total number of inspections.
-   - Clicking on a transformer shows detailed inspection records for that transformer.
-5. Add or edit transformers and inspections as needed.
-6. Mark inspections as complete to automatically sync the inspected date with the maintenance date.
-
-
-
-
-## Data & Storage Usage
-
-### Local Storage
-The current version uses browser `localStorage` to persist transformer and inspection data between sessions.
-
-- Inspection records, transformer lists, and their states are stored locally.
-- This ensures fast loading and offline-friendly operation.
-
-### Default Entries
-This application supports optional default transformers to help with quick setup and testing during the initial phase. A configuration variable (`add_default_entry`) controls whether default transformer data should be preloaded.
-
-- `true`: Loads predefined transformers.
-- `false`: Starts with an empty database.
-
-### Future Plan – Database Integration
-We aim to migrate from local storage to a structured database in the next phase.
-
-- This will enable multi-user access, centralized data management, and improved scalability.
-- The planned backend will synchronize transformer and inspection data securely.
+- **Image Comparison:** Upload and compare a standard "Baseline" image with a "Thermal" (maintenance) image.
+- **AI-Powered Analysis:** A Python backend uses computer vision techniques (image alignment, color difference analysis) to automatically detect hot spots and other anomalies.
+- **Anomaly Classification:** AI automatically classifies anomalies as `Faulty` or `Potentially Faulty` and identifies subtypes like `LooseJoint` or `PointOverload`.
+- **Interactive Annotations:** View AI-detected anomalies as bounding boxes directly on the thermal image.
+- **Manual Review & Annotation:**
+    - Draw new bounding boxes to manually identify anomalies the AI may have missed.
+    - For manually added boxes, classify them as `Faulty`, `Potentially Faulty`, or `Normal` using a simple dropdown.
+    - Add comments or reasons for any anomaly, whether AI-detected or manual.
+    - Delete incorrect or irrelevant anomaly detections.
+- **Inspection Workflow:** Track the progress of an inspection from image upload to final review.
 
 ---
 
+## Tech Stack
 
+- **Frontend:** React.js
+- **Backend:** Python with Flask
+- **Computer Vision:** OpenCV, scikit-image, NumPy
 
+---
 
+## Project Structure
 
+The project is divided into two main parts:
 
+```
+/
+├── backend/      # Contains the Python Flask server and all AI/CV logic
+└── core4/        # Contains the React.js frontend application
+```
+
+---
+
+## Setup and Installation Guide
+
+To run this project on your local machine, you will need to set up both the backend server and the frontend application.
+
+### Prerequisites
+
+- **Node.js and npm:** Download & Install Node.js
+- **Python 3.x and pip:** Download & Install Python
+
+### 1. Backend Setup (Flask Server)
+
+The backend is responsible for all the image processing and AI analysis.
+
+1.  **Navigate to the backend directory:**
+    ```bash
+    cd backend
+    ```
+
+2.  **Create and activate a virtual environment** (recommended):
+    ```bash
+    # For Windows
+    python -m venv venv
+    .\venv\Scripts\activate
+
+    # For macOS/Linux
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+3.  **Install the required Python packages:**
+    ```bash
+    pip install Flask Flask-Cors numpy opencv-python scikit-image
+    ```
+
+4.  **Run the backend server:**
+    ```bash
+    python app.py
+    ```
+
+    The server will start running on `http://localhost:8000`. Keep this terminal window open.
+
+### 2. Frontend Setup (React App)
+
+The frontend provides the user interface for interacting with the application.
+
+1.  **Open a new terminal window.**
+
+2.  **Navigate to the frontend directory:**
+    ```bash
+    cd core4
+    ```
+
+3.  **Install the required npm packages:**
+    ```bash
+    npm install
+    ```
+
+4.  **Run the frontend application:**
+    ```bash
+    npm start
+    ```
+
+    Your web browser should automatically open to `http://localhost:3000`, where you can now use the application. The frontend will communicate with the backend server you started in the other terminal.
