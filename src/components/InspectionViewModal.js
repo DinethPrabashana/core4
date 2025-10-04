@@ -79,33 +79,27 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
 
   // --- Complete button handler (Start Analysis) ---
 const handleComplete = async () => {
-  const boxes = [
-    { x: 50, y: 40, width: 100, height: 80 },
-    { x: 200, y: 120, width: 60, height: 60 }
-  ];
-
-  setLocalAnomalies(boxes);
-
   try {
     const formData = new FormData();
-    formData.append("threshold", threshold); // must be a string or number
-    if (maintenanceImage instanceof File) {      // check it's a File
-      formData.append("image", maintenanceImage);
+    formData.append("threshold", threshold); // your threshold value
+
+    // Append the maintenance image if available
+    if (maintenanceImage) {
+      formData.append("image", maintenanceImage); // File object
     }
 
-    const response = await fetch("http://127.0.0.1:32003/analyze", {
+    const response = await fetch("http://127.0.0.1:32008/analyze", {
       method: "POST",
       body: formData
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("Server error:", text);
-      return;
-    }
-
     const result = await response.json();
     console.log("AI Analysis Result:", result);
+
+    //Update anomalies with server response
+    const serverAnomalies = result.anomalies_detected || [];
+    setLocalAnomalies(serverAnomalies);
+
   } catch (err) {
     console.error("Error calling AI server:", err);
   }
@@ -115,15 +109,13 @@ const handleComplete = async () => {
     ...inspection,
     status: "Completed",
     inspectedDate: inspection.date,
-    date: null,
     progressStatus: {
       thermalUpload: "Completed",
       aiAnalysis: "Completed",
       review: "Completed"
     },
-    anomalies: boxes
+    anomalies: localAnomalies // <- or use serverAnomalies here
   };
-
   setProgressStatus(updatedInspection.progressStatus);
   setIsCompleted(true);
 

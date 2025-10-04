@@ -17,7 +17,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Response model for clarity
+# Response models
 class Anomaly(BaseModel):
     x: int
     y: int
@@ -31,33 +31,46 @@ class AnalyzeResponse(BaseModel):
 
 @app.post("/analyze", response_model=AnalyzeResponse)
 async def analyze(threshold: float = Form(...), image: UploadFile = File(None)):
-    # Print to console to debug
-    print(f"\n[INFO] Received threshold: {threshold}")
-    
+    print("\n[INFO] --- New Analysis Request ---")
+    print(f"[INFO] Threshold received: {threshold}")
+
     result = {
         "threshold_received": threshold,
         "anomalies_detected": []
     }
 
     if image is not None:
-        print(f"[INFO] Received image: {image.filename}")
-        img_bytes = await image.read()
-        img = Image.open(io.BytesIO(img_bytes))
-        width, height = img.size
-        print(f"[INFO] Image size: {width}x{height}")
+        try:
+            print(f"[INFO] Received image: {image.filename}")
+            img_bytes = await image.read()
+            img = Image.open(io.BytesIO(img_bytes))
+            
+            # Print detailed image info
+            print(f"[INFO] Image format: {img.format}")
+            print(f"[INFO] Image mode: {img.mode}")
+            width, height = img.size
+            print(f"[INFO] Image size: {width}x{height}")
 
-        # Example: generate dummy anomalies
-        result["anomalies_detected"].append({
-            "x": width // 4,
-            "y": height // 4,
-            "width": width // 2,
-            "height": height // 2,
-            "confidence": threshold
-        })
+            # Example: generate dummy anomaly
+            anomaly = {
+                "x": width // 4,
+                "y": height // 4,
+                "width": width // 2,
+                "height": height // 2,
+                "confidence": threshold
+            }
+            result["anomalies_detected"].append(anomaly)
+            print(f"[INFO] Generated anomaly: {anomaly}")
+
+        except Exception as e:
+            print(f"[ERROR] Failed to process image: {e}")
+    
+    else:
+        print("[INFO] No image received.")
 
     print(f"[INFO] Returning result: {result}")
     return result
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=32003, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=32008, log_level="info")
