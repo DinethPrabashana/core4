@@ -1,0 +1,85 @@
+.modal-overlay {
+  position: absolute;             /* let it scroll with the page */
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 100%;               /* grows with the content */
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;        /* anchor at top, not centered */
+  padding-top: 40px;              /* some spacing from top */
+  z-index: 1000;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  width: 90%;
+  max-width: 1200px;
+  /* remove height: 90vh or overflow: auto */
+}
+
+.modal-large {
+  width: 95vw;
+  height: 90vh;
+}
+
+.image-box {
+  position: relative;
+  flex: 1;
+  border: 1px solid #ccc;
+  overflow: hidden;
+  cursor: grab;
+  margin-bottom: 10px;
+}
+
+.maintenance-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.anomaly-box {
+  position: absolute;
+  border: 2px solid red;
+  pointer-events: none;
+}
+
+.image-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.control-btn {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.control-btn:hover {
+  background-color: #45a049;
+}
+
+.close-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  align-self: center;
+}
+
+.close-btn:hover {
+  background-color: #da190b;
+}

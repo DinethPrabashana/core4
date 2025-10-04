@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import '../style/InspectionViewModal.css';
+import ThermalImageComparison from "./ThermalImageComparison";
 
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection, updateTransformer }) {
   const transformer = transformers.find(t => t.id === inspection.transformer);
@@ -240,36 +241,21 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
         </div>
 
         {baselineImageURL && maintenanceImageURL && (
-          <div className="modal-section comparison">
-            <h3 className="center-text">Thermal Image Comparison</h3>
-            <div className="comparison-flex">
-              <div className="image-card">
-                <h4>Baseline Image</h4>
-                <div className="image-box"><img src={baselineImageURL} alt="Baseline" /></div>
-                <div className="image-info">
-                  <p><strong>Date & Time:</strong> {baselineUploadDate || "N/A"}</p>
-                  <p><strong>Weather:</strong> {baselineWeather}</p>
-                  <p><strong>Uploader:</strong> {uploader}</p>
-                  <p><strong>Image Type:</strong> Baseline</p>
-                </div>
-              </div>
-              <div className="image-card">
-                <h4>Thermal Image</h4>
-                <div className="image-box"><img src={maintenanceImageURL} alt="Thermal" /></div>
-                <div className="image-info">
-                  <p><strong>Date & Time:</strong> {inspection.date || "N/A"}</p>
-                  <p><strong>Weather:</strong> {maintenanceWeather}</p>
-                  <p><strong>Uploader:</strong> {uploader}</p>
-                  <p><strong>Image Type:</strong> Maintenance</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="complete-button-container">
-              <button className="inspection-complete-btn" onClick={handleComplete}>Complete</button>
-            </div>
-          </div>
-        )}
+        <ThermalImageComparison
+          baselineImageURL={baselineImageURL}
+          maintenanceImageURL={maintenanceImageURL}
+          baselineUploadDate={baselineUploadDate}
+          baselineWeather={baselineWeather}
+          maintenanceWeather={maintenanceWeather}
+          inspectionDate={inspection.date}
+          uploader={uploader}
+          onComplete={handleComplete}
+           anomalies={[
+            { x: 50, y: 40, width: 100, height: 80 },
+            { x: 200, y: 120, width: 60, height: 60 }
+  ]}
+        />
+      )}
 
         {showBaselinePreview && baselineImageURL && (
           <div className="modal-overlay">
