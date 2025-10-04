@@ -1,0 +1,45 @@
+.error-log {
+  margin-top: 15px;
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
+}
+
+.error-row {
+  margin-bottom: 8px;
+  background-color: #efeeee;
+  border-radius: 4px;
+  padding: 5px 10px;
+}
+
+.error-summary {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 15px;
+  cursor: pointer;
+}
+
+.error-title {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background-color: #db0e0e;
+  color: #ffffff;
+  font-weight: bold;
+  margin-right: 8px;
+}
+.error-date,
+.error-name {
+  font-size: 0.9rem;
+}
+
+.dropdown-arrow {
+  margin-left: auto;
+}
+
+.error-details {
+  margin-top: 5px;
+  padding-left: 10px;
+  font-size: 0.9rem;
+}
+

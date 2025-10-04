@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import '../style/InspectionViewModal.css';
 import ThermalImageComparison from "./ThermalImageComparison";
+import ErrorLog from "./ErrorLog";
 
 export default function InspectionViewModal({ inspection, transformers, onClose, updateInspection, updateTransformer }) {
   const transformer = transformers.find(t => t.id === inspection.transformer);
@@ -266,6 +267,8 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
           anomalies={localAnomalies} // <-- use local anomalies for immediate drawing
         />
       )}
+
+      <ErrorLog anomalies={localAnomalies} />
 
         {showBaselinePreview && baselineImageURL && (
           <div className="modal-overlay">
