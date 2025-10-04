@@ -73,4 +73,4 @@ async def analyze(threshold: float = Form(...), image: UploadFile = File(None)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=32008, log_level="info")
+    uvicorn.run(app, host="0.0.0.0", port=32010, log_level="info")

@@ -32,18 +32,20 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       const url = URL.createObjectURL(baselineImage);
       setBaselineImageURL(url);
       return () => URL.revokeObjectURL(url);
-    } else { setBaselineImageURL(baselineImage); }
+    } else {
+      setBaselineImageURL(baselineImage); // Base64 string
+    }
   }, [baselineImage]);
 
   // --- Maintenance Image ---
-  const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || null);
+  const [maintenanceImage, setMaintenanceImage] = useState(inspection.maintenanceImage || transformer?.maintenanceImage || null);
   const [maintenanceWeather, setMaintenanceWeather] = useState(inspection.maintenanceWeather || "Sunny");
-  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || null);
+  const [maintenanceUploadDate, setMaintenanceUploadDate] = useState(inspection.maintenanceUploadDate || transformer?.maintenanceUploadDate || null);
   const [localMaintenanceChanged, setLocalMaintenanceChanged] = useState(false);
 
   useEffect(() => {
     if (!localMaintenanceChanged && transformer?.maintenanceImage) {
-      setMaintenanceImage(transformer.maintenanceImage);
+      setMaintenanceImage(transformer.maintenanceImage); // Base64 string
       setMaintenanceWeather(transformer?.maintenanceWeather || "Sunny");
       setMaintenanceUploadDate(transformer?.maintenanceUploadDate || null);
     }
@@ -56,7 +58,9 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
       const url = URL.createObjectURL(maintenanceImage);
       setMaintenanceImageURL(url);
       return () => URL.revokeObjectURL(url);
-    } else { setMaintenanceImageURL(maintenanceImage); }
+    } else {
+      setMaintenanceImageURL(maintenanceImage); // Base64 string
+    }
   }, [maintenanceImage]);
 
   const [showBaselinePreview, setShowBaselinePreview] = useState(false);
@@ -78,49 +82,49 @@ export default function InspectionViewModal({ inspection, transformers, onClose,
   const [localAnomalies, setLocalAnomalies] = useState(inspection.anomalies || []);
 
   // --- Complete button handler (Start Analysis) ---
-const handleComplete = async () => {
-  try {
-    const formData = new FormData();
-    formData.append("threshold", threshold); // your threshold value
+  const handleComplete = async () => {
+    try {
+      const formData = new FormData();
+      formData.append("threshold", threshold);
 
-    // Append the maintenance image if available
-    if (maintenanceImage) {
-      formData.append("image", maintenanceImage); // File object
+      if (maintenanceImage) {
+        // Convert Base64 string back to Blob before sending
+        const res = await fetch(maintenanceImage);
+        const blob = await res.blob();
+        formData.append("image", blob, "maintenance.png"); // filename optional
+      }
+
+      const response = await fetch("http://127.0.0.1:32010/analyze", {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await response.json();
+      console.log("AI Analysis Result:", result);
+
+      const serverAnomalies = result.anomalies_detected || [];
+      setLocalAnomalies(serverAnomalies);
+
+    } catch (err) {
+      console.error("Error calling AI server:", err);
     }
 
-    const response = await fetch("http://127.0.0.1:32008/analyze", {
-      method: "POST",
-      body: formData
-    });
+    const updatedInspection = {
+      ...inspection,
+      status: "Completed",
+      inspectedDate: inspection.date,
+      progressStatus: {
+        thermalUpload: "Completed",
+        aiAnalysis: "Completed",
+        review: "Completed"
+      },
+      anomalies: localAnomalies
+    };
+    setProgressStatus(updatedInspection.progressStatus);
+    setIsCompleted(true);
 
-    const result = await response.json();
-    console.log("AI Analysis Result:", result);
-
-    //Update anomalies with server response
-    const serverAnomalies = result.anomalies_detected || [];
-    setLocalAnomalies(serverAnomalies);
-
-  } catch (err) {
-    console.error("Error calling AI server:", err);
-  }
-
-  // Update inspection status
-  const updatedInspection = {
-    ...inspection,
-    status: "Completed",
-    inspectedDate: inspection.date,
-    progressStatus: {
-      thermalUpload: "Completed",
-      aiAnalysis: "Completed",
-      review: "Completed"
-    },
-    anomalies: localAnomalies // <- or use serverAnomalies here
+    if (updateInspection) updateInspection(updatedInspection);
   };
-  setProgressStatus(updatedInspection.progressStatus);
-  setIsCompleted(true);
-
-  if (updateInspection) updateInspection(updatedInspection);
-};
 
   // --- Handlers ---
   const handleBaselineUpload = (e) => {
@@ -160,18 +164,23 @@ const handleComplete = async () => {
     }
   };
 
-const handleMaintenanceUpload = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    setMaintenanceImage(file); // store File object directly
-    setLocalMaintenanceChanged(true);
-    setProgressStatus({
-      thermalUpload: "Completed",
-      aiAnalysis: "In Progress",
-      review: "In Progress"
-    });
-  }
-};
+  const handleMaintenanceUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const dataURL = reader.result; // Base64 string
+        setMaintenanceImage(dataURL);
+        setLocalMaintenanceChanged(true);
+        setProgressStatus({
+          thermalUpload: "Completed",
+          aiAnalysis: "In Progress",
+          review: "In Progress"
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSave = () => {
     if (updateInspection) {
@@ -239,7 +248,7 @@ const handleMaintenanceUpload = (e) => {
               <label>
                 Weather:
                 <select value={baselineWeather} onChange={e => setBaselineWeather(e.target.value)} disabled={!baselineImage}>
-                  {["Sunny", "Rainy", "Cloudy"].map(w => <option key={w} value={w}>{w}</option>)}
+                  {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               </label>
             </div>
@@ -264,7 +273,7 @@ const handleMaintenanceUpload = (e) => {
             <label>
               Weather:
               <select value={maintenanceWeather} onChange={e => setMaintenanceWeather(e.target.value)}>
-                {["Sunny", "Rainy", "Cloudy"].map(w => <option key={w} value={w}>{w}</option>)}
+                {weatherOptions.map(w => <option key={w} value={w}>{w}</option>)}
               </select>
             </label>
           </div>
@@ -285,7 +294,6 @@ const handleMaintenanceUpload = (e) => {
         )}
 
         <ErrorLog anomalies={localAnomalies || []} />
-        {/* Pass threshold state to ErrorRuleset */}
         <ErrorRuleset threshold={threshold} setThreshold={setThreshold} />
 
         {showBaselinePreview && baselineImageURL && (
