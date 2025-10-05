@@ -35,6 +35,15 @@ class DetectionReport:
     mean_ssim: float
     image_level_label: str
     blobs: List[BlobDet]
+    # --- Added threshold metadata ---
+    t_pot: float
+    t_fault: float
+    base_t_pot: float
+    base_t_fault: float
+    slider_percent: float | None
+    scale_applied: float | None
+    threshold_source: str
+    ratio: float
 
 # ---------- Utilities ----------
 def read_bgr(path: str) -> np.ndarray:
@@ -341,7 +350,8 @@ def overlay_detections(img_bgr: np.ndarray, blobs: List[BlobDet]) -> np.ndarray:
 
 # ---------- Main entry ----------
 def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: str,
-                     out_overlay_path: str, out_json_path: str) -> DetectionReport:
+                     out_overlay_path: str, out_json_path: str,
+                     slider_percent: float | None = None) -> DetectionReport:
 
     base_bgr = read_bgr(baseline_path)
     ment_bgr = read_bgr(maintenance_path)
@@ -371,16 +381,46 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
     # SSIM sanity (structure similarity)
     mean_ssim, _ = ssim(base_gray, ment_aligned_gray, full=True, data_range=255)
 
-    # Convert to LAB/HSV
+    # --- Base adaptive thresholds (unchanged defaults) ---
+    base_t_pot  = 8.0  if mean_ssim >= 0.70 else 10.0
+    base_t_fault = 12.0 if mean_ssim >= 0.70 else 14.0
+    ratio = base_t_fault / base_t_pot
+
+    # --- Slider scaling (gentle) ---
+    threshold_source = "adaptive_ssim"
+    scale_applied = None
+    if slider_percent is not None:
+        try:
+            p = float(slider_percent)
+        except (TypeError, ValueError):
+            p = None
+        if p is not None:
+            p = max(0.0, min(100.0, p))
+            # scale in [0.8,1.2]: p=100 -> 0.8 (more sensitive), p=0 -> 1.2 (stricter)
+            scale_applied = 1.2 - 0.4*(p/100.0)
+            t_pot = base_t_pot * scale_applied
+            # clamp to practical ranges
+            if mean_ssim >= 0.70:
+                t_pot = float(np.clip(t_pot, 6.0, 11.0))
+            else:
+                t_pot = float(np.clip(t_pot, 8.0, 13.0))
+            t_fault = t_pot * ratio
+            threshold_source = "slider_scaled"
+        else:
+            t_pot = base_t_pot
+            t_fault = base_t_fault
+    else:
+        t_pot = base_t_pot
+        t_fault = base_t_fault
+
+    # Convert to LAB/HSV after thresholds decided
     base_lab, _ = lab_and_hsv(base_bgr)
     ment_lab, ment_hsv = lab_and_hsv(ment_aligned_bgr)
 
     # ΔE2000 map
     dE = deltaE_map(base_lab, ment_lab)
 
-    # Hot color gating + ΔE threshold (adaptive to SSIM)
-    t_pot  = 8.0  if mean_ssim >= 0.70 else 10.0
-    t_fault = 12.0 if mean_ssim >= 0.70 else 14.0
+    # Hot color gating + ΔE threshold (adaptive + slider)
     mask_hot = hot_color_mask(ment_hsv)
     mask_delta = (dE >= t_pot).astype(np.uint8)*255
     mask = cv.bitwise_and(mask_hot, mask_delta)
@@ -418,13 +458,32 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
         warp_score=float(score),
         mean_ssim=float(mean_ssim),
         image_level_label=image_label,
-        blobs=blobs
+        blobs=blobs,
+        t_pot=float(t_pot),
+        t_fault=float(t_fault),
+        base_t_pot=float(base_t_pot),
+        base_t_fault=float(base_t_fault),
+        slider_percent=float(slider_percent) if slider_percent is not None else None,
+        scale_applied=float(scale_applied) if scale_applied is not None else None,
+        threshold_source=threshold_source,
+        ratio=float(ratio)
     )
 
     with open(out_json_path, "w") as f:
         json.dump({
             **{k:v for k,v in asdict(rep).items() if k!='blobs'},
-            "blobs": [asdict(b) for b in blobs]
+            "blobs": [asdict(b) for b in blobs],
+            "thresholds_used": {
+                "t_pot": rep.t_pot,
+                "t_fault": rep.t_fault,
+                "base_t_pot": rep.base_t_pot,
+                "base_t_fault": rep.base_t_fault,
+                "slider_percent": rep.slider_percent,
+                "scale_applied": rep.scale_applied,
+                "source": rep.threshold_source,
+                "ratio": rep.ratio,
+                "mean_ssim": rep.mean_ssim
+            }
         }, f, indent=2)
 
     return rep
@@ -432,9 +491,10 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
 if __name__ == "__main__":
     # Example:
     # python anomaly_cv.py TX001 baseline.jpg maintenance.jpg out_overlay.png out_report.json
-    if len(sys.argv) != 6:
-        print("Usage: python anomaly_cv.py <transformer_id> <baseline.jpg> <maintenance.jpg> <overlay.png> <report.json>")
+    if len(sys.argv) not in (6,7):
+        print("Usage: python anomaly_cv.py <transformer_id> <baseline.jpg> <maintenance.jpg> <overlay.png> <report.json> [slider_percent]")
         sys.exit(1)
-    _, txid, bpath, mpath, opath, jpath = sys.argv
-    rep = detect_anomalies(txid, bpath, mpath, opath, jpath)
-    print(f"Result: {rep.image_level_label} | blobs={len(rep.blobs)} | SSIM={rep.mean_ssim:.3f} | warp={rep.warp_model}")
+    _, txid, bpath, mpath, opath, jpath, *rest = sys.argv
+    slider_arg = float(rest[0]) if rest else None
+    rep = detect_anomalies(txid, bpath, mpath, opath, jpath, slider_percent=slider_arg)
+    print(f"Result: {rep.image_level_label} | blobs={len(rep.blobs)} | SSIM={rep.mean_ssim:.3f} | warp={rep.warp_model} | t_pot={rep.t_pot:.2f} t_fault={rep.t_fault:.2f} (src={rep.threshold_source})")

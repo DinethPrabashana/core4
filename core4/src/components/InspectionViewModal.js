@@ -101,7 +101,9 @@ export default function InspectionViewModal({
   const [annotatedImage, setAnnotatedImage] = useState(inspection.annotatedImage || null); // data-uri or url
   const [anomalies, setAnomalies] = useState(inspection.anomalies || []); // {id,x,y,w,h,confidence,comment,source,deleted}
   const [isRunningAI, setIsRunningAI] = useState(false);
-  const [aiThreshold, setAiThreshold] = useState(0.5); // New state for AI threshold
+  // Slider percent (0-100) for gentle sensitivity scaling (0 stricter, 100 more sensitive)
+  const [sliderPercent, setSliderPercent] = useState(50);
+  const [thresholdsUsed, setThresholdsUsed] = useState(null); // store backend returned thresholds
   const [zoomLevel, setZoomLevel] = useState(1); // Re-add state for zoom slider
   const [imageLoaded, setImageLoaded] = useState(0); // State to trigger re-render on image load
   const [hoveredAnomalyId, setHoveredAnomalyId] = useState(null); // For highlighting
@@ -290,7 +292,7 @@ export default function InspectionViewModal({
       form.append('baseline', bfile);
       form.append('maintenance', mfile);
       form.append('inspection_id', inspection.id);
-      form.append('threshold', aiThreshold); // Send threshold to backend
+  form.append('slider_percent', sliderPercent); // new unified sensitivity control
 
       const res = await fetch("http://localhost:8000/analyze", {
         method: "POST",
@@ -302,7 +304,7 @@ export default function InspectionViewModal({
         throw new Error(`AI analyze failed: ${txt}`);
       }
 
-      const j = await res.json();
+  const j = await res.json();
       // Expect: { annotatedImage: <data-uri or url>, anomalies: [{id,x,y,w,h,confidence,severity}] }
       // Use the image data URI sent directly from the backend. This is crucial.
       setAnnotatedImage(j.annotatedImage);
@@ -319,6 +321,11 @@ export default function InspectionViewModal({
         deleted: false
       }));
       setAnomalies(mapped);
+      if (j.thresholdsUsed) {
+        setThresholdsUsed(j.thresholdsUsed);
+      } else {
+        setThresholdsUsed(null);
+      }
       setProgressStatus(prev => ({ ...prev, aiAnalysis: "Completed", review: "In Progress", thermalUpload: "Completed" }));
     } catch (err) {
       console.error(err);
@@ -540,13 +547,24 @@ export default function InspectionViewModal({
 
             <div style={{ marginTop: 12 }}>
               <div className="threshold-slider">
-                <label htmlFor="ai-threshold">Anomaly Detection Threshold: {Math.round(aiThreshold * 100)}%</label>
+                <label htmlFor="slider-percent">Detection Sensitivity: {sliderPercent}%</label>
                 <input
                   type="range"
-                  id="ai-threshold"
-                  min="0" max="1" step="0.05"
-                  value={aiThreshold}
-                  onChange={e => setAiThreshold(parseFloat(e.target.value))} />
+                  id="slider-percent"
+                  min="0" max="100" step="1"
+                  value={sliderPercent}
+                  onChange={e => setSliderPercent(parseInt(e.target.value,10))} />
+                <div style={{fontSize:'0.8rem', marginTop:4}}>
+                  <em>0 = stricter (fewer detections), 100 = more sensitive (more detections)</em>
+                </div>
+                {thresholdsUsed && (
+                  <div style={{marginTop:8, fontSize:'0.75rem', lineHeight:1.3}}>
+                    <strong>Applied Thresholds:</strong><br/>
+                    Potential ΔE: {thresholdsUsed.t_pot?.toFixed(2)} | Fault ΔE: {thresholdsUsed.t_fault?.toFixed(2)}<br/>
+                    Source: {thresholdsUsed.source} | Scale: {thresholdsUsed.scale_applied ?? '—'}<br/>
+                    SSIM: {thresholdsUsed.mean_ssim?.toFixed(3)}
+                  </div>
+                )}
               </div>
               <button
                 className="analysis-btn"

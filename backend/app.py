@@ -36,7 +36,13 @@ def analyze_images_endpoint():
     
     # The frontend doesn't use the threshold with this advanced CV script,
     # but we can keep the parameter for future use.
-    threshold = request.form.get('threshold', 0.5)
+    # Legacy threshold (unused now) and new slider_percent (0-100)
+    threshold = request.form.get('threshold', 0.5)  # kept for backward compatibility
+    slider_percent = request.form.get('slider_percent')
+    try:
+        slider_percent_val = float(slider_percent) if slider_percent not in (None, "") else None
+    except ValueError:
+        slider_percent_val = None
     inspection_id = request.form.get('inspection_id', 'unknown_inspection')
 
     # --- File Handling ---
@@ -59,7 +65,8 @@ def analyze_images_endpoint():
             baseline_path=baseline_path,
             maintenance_path=maintenance_path,
             out_overlay_path=overlay_path,
-            out_json_path=report_path
+            out_json_path=report_path,
+            slider_percent=slider_percent_val
         )
 
         # --- Prepare Response for Frontend ---
@@ -85,9 +92,24 @@ def analyze_images_endpoint():
                 "source": "ai"
             })
 
+        # Parse thresholds_used from JSON file (already written). Instead of re-reading the file,
+        # we can construct it from the report object attributes.
+        thresholds_used = {
+            "t_pot": report.t_pot,
+            "t_fault": report.t_fault,
+            "base_t_pot": report.base_t_pot,
+            "base_t_fault": report.base_t_fault,
+            "slider_percent": report.slider_percent,
+            "scale_applied": report.scale_applied,
+            "source": report.threshold_source,
+            "ratio": report.ratio,
+            "mean_ssim": report.mean_ssim
+        }
+
         return jsonify({
             "annotatedImage": annotated_image_uri,
-            "anomalies": anomalies_list
+            "anomalies": anomalies_list,
+            "thresholdsUsed": thresholds_used
         })
 
     except Exception as e:
