@@ -29,7 +29,15 @@ export default function InspectionViewModal({
   const [baselineImageURL, setBaselineImageURL] = useState(null);
   useEffect(() => {
     if (!baselineImage) { setBaselineImageURL(null); return; }
-    if (baselineImage instanceof File || baselineImage instanceof Blob) {
+    if (typeof baselineImage === 'string') {
+      // If it's a filename, fetch from backend
+      if (baselineImage.includes('.png')) {
+        setBaselineImageURL(`http://localhost:8000/get_baseline/${baselineImage}`);
+      } else {
+        // Old dataURI
+        setBaselineImageURL(baselineImage);
+      }
+    } else if (baselineImage instanceof File || baselineImage instanceof Blob) {
       const url = URL.createObjectURL(baselineImage);
       setBaselineImageURL(url);
       return () => URL.revokeObjectURL(url);
@@ -224,22 +232,36 @@ export default function InspectionViewModal({
   const handleBaselineUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const now = new Date().toLocaleString();
-        setBaselineImage(reader.result);
-        setBaselineUploadDate(now);
-        setLocalBaselineChanged(true);
-        if (updateTransformer && transformer) {
-          updateTransformer({
-            ...transformer,
-            baselineImage: reader.result,
-            baselineUploadDate: now,
-            weather: baselineWeather
-          });
+      // Upload to backend instead of storing dataURI
+      const form = new FormData();
+      form.append('baseline', file);
+      fetch("http://localhost:8000/upload_baseline", {
+        method: "POST",
+        body: form
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.filename) {
+          const now = new Date().toLocaleString();
+          setBaselineImage(data.filename); // Store filename
+          setBaselineUploadDate(now);
+          setLocalBaselineChanged(true);
+          if (updateTransformer && transformer) {
+            updateTransformer({
+              ...transformer,
+              baselineImage: data.filename, // Store filename
+              baselineUploadDate: now,
+              weather: baselineWeather
+            });
+          }
+        } else {
+          alert("Failed to upload baseline image");
         }
-      };
-      reader.readAsDataURL(file);
+      })
+      .catch(err => {
+        console.error("Upload error:", err);
+        alert("Error uploading baseline image");
+      });
     }
   };
   const handleDeleteBaseline = () => {
@@ -287,9 +309,13 @@ export default function InspectionViewModal({
     try {
       const form = new FormData();
       // backend expects files; convert dataURI to File if necessary
-      const bfile = baselineImage instanceof File ? baselineImage : dataURLtoFile(baselineImage, 'baseline.png');
+      const bfile = baselineImage instanceof File ? baselineImage : (typeof baselineImage === 'string' && !baselineImage.includes('.png') ? dataURLtoFile(baselineImage, 'baseline.png') : null);
       const mfile = maintenanceImage instanceof File ? maintenanceImage : dataURLtoFile(maintenanceImage, 'maintenance.png');
-      form.append('baseline', bfile);
+      if (typeof baselineImage === 'string' && baselineImage.includes('.png')) {
+        form.append('baseline_filename', baselineImage);
+      } else {
+        form.append('baseline', bfile);
+      }
       form.append('maintenance', mfile);
       form.append('inspection_id', inspection.id);
   form.append('slider_percent', sliderPercent); // new unified sensitivity control
@@ -717,6 +743,17 @@ export default function InspectionViewModal({
                           {manualClassificationOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                         </select>
                       )}
+                    </td>
+                    <td>
+                      <div style={{ lineHeight: '1.4' }}>
+                        <div><strong>Pos:</strong> ({Math.round(a.x)}, {Math.round(a.y)})</div>
+                        <div><strong>Size:</strong> {Math.round(a.w)}x{Math.round(a.h)} px</div>
+                        {a.source === 'ai' && (
+                          <div>
+                            <strong>Conf:</strong> {a.confidence ? `${Math.round(a.confidence * 100)}%` : 'N/A'}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <div style={{ lineHeight: '1.4' }}>
