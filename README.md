@@ -74,6 +74,7 @@ The backend is responsible for all image processing, AI analysis, and data persi
 3.  **Install the required Python packages:**
     ```bash
     pip install Flask Flask-Cors numpy opencv-python scikit-image
+    pip install requirements.txt
     ```
 
 4.  **Initialize the database:**
