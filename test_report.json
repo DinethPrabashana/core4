@@ -1,0 +1,11 @@
+{
+  "transformer_id": "TEST",
+  "baseline_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T13\\faulty\\T13_faulty_001.jpg",
+  "maintenance_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T13\\faulty\\T13_faulty_001.jpg",
+  "warp_model": "affine",
+  "warp_success": true,
+  "warp_score": 0.9999999591139433,
+  "mean_ssim": 1.0,
+  "image_level_label": "Normal",
+  "blobs": []
+}

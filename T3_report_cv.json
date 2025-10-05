@@ -1,0 +1,64 @@
+{
+  "transformer_id": "T3",
+  "baseline_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T3\\normal\\T3_normal_001.png",
+  "maintenance_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T3\\faulty\\T3_faulty_001.png",
+  "warp_model": "affine",
+  "warp_success": true,
+  "warp_score": 0.7873325273311224,
+  "mean_ssim": 0.7632574586686568,
+  "image_level_label": "Potentially Faulty",
+  "blobs": [
+    {
+      "label": 1,
+      "bbox": [
+        40,
+        73,
+        46,
+        98
+      ],
+      "area": 4004,
+      "centroid": [
+        62.531718281718284,
+        123.03246753246754
+      ],
+      "mean_deltaE": 54.273826599121094,
+      "peak_deltaE": 71.4455795288086,
+      "mean_hsv": [
+        29.80894105894106,
+        218.73901098901098,
+        251.30194805194805
+      ],
+      "elongation": 4.511089911066896,
+      "classification": "Potentially Faulty",
+      "subtype": "PointOverload",
+      "confidence": 1.0,
+      "severity": 84.59687835693359
+    },
+    {
+      "label": 2,
+      "bbox": [
+        92,
+        82,
+        4,
+        41
+      ],
+      "area": 124,
+      "centroid": [
+        93.08064516129032,
+        101.87903225806451
+      ],
+      "mean_deltaE": 24.290231704711914,
+      "peak_deltaE": 27.402294158935547,
+      "mean_hsv": [
+        31.362903225806452,
+        248.34677419354838,
+        250.2016129032258
+      ],
+      "elongation": 161.34615216528664,
+      "classification": "Potentially Faulty",
+      "subtype": "PointOverload",
+      "confidence": 1.0,
+      "severity": 26.777469177246097
+    }
+  ]
+}

@@ -1,0 +1,246 @@
+{
+  "transformer_id": "T9",
+  "baseline_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T9\\normal\\T9_normal_003.jpg",
+  "maintenance_path": "C:\\Users\\USER\\Desktop\\SDC\\anomaly_detection\\Sample Thermal Images\\T9\\faulty\\T9_faulty_001.jpg",
+  "warp_model": "affine",
+  "warp_success": true,
+  "warp_score": 0.7850357336351609,
+  "mean_ssim": 0.4758124962347941,
+  "image_level_label": "Faulty",
+  "blobs": [
+    {
+      "label": 1,
+      "bbox": [
+        1482,
+        502,
+        107,
+        171
+      ],
+      "area": 8652,
+      "centroid": [
+        1543.2686084142395,
+        566.8465094775775
+      ],
+      "mean_deltaE": 64.04450988769531,
+      "peak_deltaE": 84.41412353515625,
+      "mean_hsv": [
+        18.058599167822468,
+        227.24052242256127,
+        231.49838187702267
+      ],
+      "elongation": 4.616596661462621,
+      "classification": "Faulty",
+      "subtype": "FullWireOverload",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 2,
+      "bbox": [
+        1041,
+        552,
+        259,
+        184
+      ],
+      "area": 12755,
+      "centroid": [
+        1188.748333986672,
+        619.8395139161113
+      ],
+      "mean_deltaE": 59.074195861816406,
+      "peak_deltaE": 102.76659393310547,
+      "mean_hsv": [
+        13.425637005096041,
+        223.8778518228146,
+        215.76519012152096
+      ],
+      "elongation": 3.2083892767167073,
+      "classification": "Faulty",
+      "subtype": "FullWireOverload",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 4,
+      "bbox": [
+        1448,
+        775,
+        114,
+        63
+      ],
+      "area": 4511,
+      "centroid": [
+        1506.6863223232099,
+        808.1629350476612
+      ],
+      "mean_deltaE": 100.68014526367188,
+      "peak_deltaE": 105.40010070800781,
+      "mean_hsv": [
+        33.35424517845267,
+        189.66747949456882,
+        221.7812015074263
+      ],
+      "elongation": 6.738781514476138,
+      "classification": "Potentially Faulty",
+      "subtype": "FullWireOverload",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 5,
+      "bbox": [
+        1374,
+        806,
+        54,
+        51
+      ],
+      "area": 2003,
+      "centroid": [
+        1401.2596105841237,
+        831.3794308537194
+      ],
+      "mean_deltaE": 86.30728912353516,
+      "peak_deltaE": 105.73088073730469,
+      "mean_hsv": [
+        33.68347478781827,
+        189.24463305042437,
+        222.6110833749376
+      ],
+      "elongation": 1.568833466396063,
+      "classification": "Potentially Faulty",
+      "subtype": "LooseJoint",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 6,
+      "bbox": [
+        1306,
+        825,
+        47,
+        40
+      ],
+      "area": 1451,
+      "centroid": [
+        1331.1474844934528,
+        845.3990351481737
+      ],
+      "mean_deltaE": 90.59794616699219,
+      "peak_deltaE": 105.47689056396484,
+      "mean_hsv": [
+        33.567195037904895,
+        189.16609235010338,
+        222.2591316333563
+      ],
+      "elongation": 1.5302899690568355,
+      "classification": "Potentially Faulty",
+      "subtype": "LooseJoint",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 7,
+      "bbox": [
+        1939,
+        825,
+        96,
+        60
+      ],
+      "area": 3087,
+      "centroid": [
+        1976.8905085843862,
+        858.9883381924199
+      ],
+      "mean_deltaE": 101.53121185302734,
+      "peak_deltaE": 103.2157974243164,
+      "mean_hsv": [
+        34.19339164237123,
+        188.49497894395853,
+        223.59863945578232
+      ],
+      "elongation": 3.323788585311348,
+      "classification": "Potentially Faulty",
+      "subtype": "FullWireOverload",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 8,
+      "bbox": [
+        1241,
+        845,
+        33,
+        28
+      ],
+      "area": 651,
+      "centroid": [
+        1258.8878648233488,
+        859.1689708141321
+      ],
+      "mean_deltaE": 95.74183654785156,
+      "peak_deltaE": 100.97209930419922,
+      "mean_hsv": [
+        34.40245775729647,
+        187.87711213517665,
+        224.20430107526883
+      ],
+      "elongation": 1.6004417060560405,
+      "classification": "Potentially Faulty",
+      "subtype": "LooseJoint",
+      "confidence": 1.0,
+      "severity": 100.0
+    },
+    {
+      "label": 9,
+      "bbox": [
+        2060,
+        1027,
+        22,
+        27
+      ],
+      "area": 282,
+      "centroid": [
+        2068.695035460993,
+        1042.8794326241134
+      ],
+      "mean_deltaE": 102.32906341552734,
+      "peak_deltaE": 104.04537963867188,
+      "mean_hsv": [
+        35.0531914893617,
+        186.0,
+        227.0
+      ],
+      "elongation": 3.170953629498502,
+      "classification": "Potentially Faulty",
+      "subtype": "FullWireOverload",
+      "confidence": 0.9999999999384607,
+      "severity": 100.0
+    },
+    {
+      "label": 10,
+      "bbox": [
+        2136,
+        1068,
+        7,
+        5
+      ],
+      "area": 31,
+      "centroid": [
+        2139.0,
+        1070.0
+      ],
+      "mean_deltaE": 102.17576599121094,
+      "peak_deltaE": 102.45243835449219,
+      "mean_hsv": [
+        35.0,
+        185.48387096774192,
+        226.74193548387098
+      ],
+      "elongation": 1.9259254115229196,
+      "classification": "Potentially Faulty",
+      "subtype": "LooseJoint",
+      "confidence": 1.0,
+      "severity": 100.0
+    }
+  ]
+}
