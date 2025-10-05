@@ -188,31 +188,9 @@ export default function InspectionViewModal({
 
     // If there are annotations/anomalies, send to backend
     if (anomalies && anomalies.length > 0) {
-      try {
-        const payload = {
-          inspectionId: inspection.id,
-          anomalies: anomalies.map(a => ({
-            id: a.id,
-            x: Math.round(a.x),
-            y: Math.round(a.y),
-            w: Math.round(a.w),
-            h: Math.round(a.h),
-            confidence: a.confidence ?? null,
-            classification: a.classification ?? null,
-            severity: a.severity ?? null,
-            comment: a.comment ?? null,
-            deleted: !!a.deleted,
-            source: a.source || 'ai' // 'ai' or 'user'
-          }))
-        };
-        await fetch("http://localhost:8000/save_annotations", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      } catch (err) {
-        console.error("Failed to save annotations", err);
-      }
+      // The annotations are now saved as part of the main inspection update,
+      // so the separate call to /save_annotations is no longer needed.
+      // The `updateInspection` function below handles this.
     }
 
     onClose();

@@ -5,8 +5,9 @@ import base64
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Import the core logic from your anomaly_cv.py
+# Import logic
 from anomaly_cv import detect_anomalies, BlobDet
+import database as db
 
 # --- Flask App Setup ---
 
@@ -16,6 +17,13 @@ CORS(app)  # Enable Cross-Origin Resource Sharing for your frontend
 # Create a temporary directory for file processing if it doesn't exist
 TEMP_DIR = "temp_files"
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+# --- Database Initialization ---
+# Check if the database file exists, if not, initialize it.
+if not os.path.exists(db.DATABASE):
+    print(f"Database not found. Initializing at {db.DATABASE}...")
+    db.init_db()
+
 
 def image_to_data_uri(filepath):
     """Convert an image file to a base64 data URI."""
@@ -99,6 +107,60 @@ def analyze_images_endpoint():
         for path in [baseline_path, maintenance_path, overlay_path, report_path]:
             if os.path.exists(path):
                 os.remove(path)
+
+
+# --- CRUD API for Transformers ---
+
+@app.route('/api/transformers', methods=['GET', 'POST'])
+def handle_transformers():
+    if request.method == 'GET':
+        transformers = db.get_all_transformers()
+        return jsonify(transformers)
+    if request.method == 'POST':
+        transformer_data = request.json
+        saved_transformer = db.add_transformer(transformer_data)
+        return jsonify(saved_transformer), 201
+
+@app.route('/api/transformers/<int:id>', methods=['DELETE'])
+def handle_transformer(id):
+    if request.method == 'DELETE':
+        db.delete_transformer(id)
+        return jsonify({'message': 'Transformer deleted'}), 200
+
+@app.route('/api/transformers/update_from_inspection', methods=['POST'])
+def handle_transformer_update_from_inspection():
+    data = request.json
+    db.update_transformer_from_inspection(
+        data['transformerId'],
+        data['baselineImage'],
+        data['baselineUploadDate'],
+        data['weather']
+    )
+    return jsonify({'message': 'Transformer updated successfully'}), 200
+
+# --- CRUD API for Inspections ---
+
+@app.route('/api/inspections', methods=['GET', 'POST'])
+def handle_inspections():
+    if request.method == 'GET':
+        inspections = db.get_all_inspections()
+        return jsonify(inspections)
+    if request.method == 'POST':
+        inspection_data = request.json
+        saved_inspection = db.add_inspection(inspection_data)
+        return jsonify(saved_inspection), 201
+
+@app.route('/api/inspections/<int:id>', methods=['PUT', 'DELETE'])
+def handle_inspection(id):
+    if request.method == 'PUT':
+        inspection_data = request.json
+        inspection_data['id'] = id
+        db.update_inspection(inspection_data)
+        return jsonify({'message': 'Inspection updated'}), 200
+    if request.method == 'DELETE':
+        db.delete_inspection(id)
+        return jsonify({'message': 'Inspection deleted'}), 200
+
 
 if __name__ == '__main__':
     # This makes the server accessible on your local network

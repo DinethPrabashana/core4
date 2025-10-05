@@ -1,21 +1,12 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Tabs from "./components/Tabs";
-import TransformerList from "./components/TransformerList";
-import TransformerModal from "./components/TransformerModal";
-import InspectionList from "./components/InspectionList";
-import InspectionModal from "./components/InspectionModal";
-import InspectionViewModal from "./components/InspectionViewModal";
-import TransformerInspectionsPage from "./components/TransformerInspectionsPage";
+import TransformerList from "./components/TransformerList"; import TransformerModal from "./components/TransformerModal"; import InspectionList from "./components/InspectionList"; import InspectionModal from "./components/InspectionModal"; import InspectionViewModal from "./components/InspectionViewModal"; import TransformerInspectionsPage from "./components/TransformerInspectionsPage";
 import SettingsPage from "./components/SettingsPage";
 
-import t1 from "./assets/transformer1.png";
-import t2 from "./assets/transformer2.png";
-import t3 from "./assets/transformer3.png";
-import t4 from "./assets/transformer4.png";
-import t5 from "./assets/transformer5.png";
-
 import "./App.css";
+
+const API_URL = "http://localhost:8000/api";
 
 function App() {
   const [activePage, setActivePage] = useState("page1");
@@ -59,54 +50,26 @@ function App() {
   const [showTransformerInspectionsPage, setShowTransformerInspectionsPage] = useState(false);
   const [selectedTransformerForPage, setSelectedTransformerForPage] = useState(null);
 
-  // --- Add default transformers toggle ---
-  const ADD_DEFAULT_ENTRY = true; // set false to skip default transformers
-
-  // --- Default transformers ---
-  const DEFAULT_TRANSFORMERS = [
-    { id: 1, number: "TX-001", pole: "A1", region: "Ragama", type: "Bulk", baselineImage: t1, baselineUploadDate: null, weather: "Sunny", location: "Site 1" },
-    { id: 2, number: "TX-002", pole: "A2", region: "Gampaha", type: "Distribution", baselineImage: t2, baselineUploadDate: null, weather: "Cloudy", location: "Site 2" },
-    { id: 3, number: "TX-003", pole: "B1", region: "Nugegoda", type: "Bulk", baselineImage: t3, baselineUploadDate: null, weather: "Rainy", location: "Site 3" },
-    { id: 4, number: "TX-004", pole: "B2", region: "Colombo", type: "Distribution", baselineImage: t4, baselineUploadDate: null, weather: "Sunny", location: "Site 4" },
-    { id: 5, number: "TX-005", pole: "C1", region: "Kalaniya", type: "Distribution", baselineImage: t5, baselineUploadDate: null, weather: "Cloudy", location: "Site 5" },
-  ];
-
-  // --- Load transformers ---
+  // --- Load all data from backend on startup ---
   useEffect(() => {
-    let savedTransformers = [];
-    try {
-      savedTransformers = JSON.parse(localStorage.getItem("transformers")) || [];
-    } catch {
-      savedTransformers = [];
-    }
-
-    let allTransformers = savedTransformers;
-
-    if (ADD_DEFAULT_ENTRY) {
-      // Add default transformers only if not already present
-      const existingIds = new Set(savedTransformers.map(t => t.id));
-      const transformersToAdd = DEFAULT_TRANSFORMERS.filter(t => !existingIds.has(t.id));
-      allTransformers = [...transformersToAdd, ...savedTransformers];
-    }
-
-    setTransformers(allTransformers);
-    localStorage.setItem("transformers", JSON.stringify(allTransformers));
+    const fetchData = async () => {
+      try {
+        const [transformersRes, inspectionsRes] = await Promise.all([
+          fetch(`${API_URL}/transformers`),
+          fetch(`${API_URL}/inspections`),
+        ]);
+        const transformersData = await transformersRes.json();
+        const inspectionsData = await inspectionsRes.json();
+        setTransformers(transformersData);
+        setInspections(inspectionsData);
+      } catch (error) {
+        console.error("Failed to fetch data from backend:", error);
+        alert("Could not connect to the backend. Please ensure it is running.");
+      }
+    };
+    fetchData();
   }, []);
 
-  // --- Load inspections ---
-  useEffect(() => {
-    let savedInspections = [];
-    try {
-      savedInspections = JSON.parse(localStorage.getItem("inspections")) || [];
-    } catch {
-      savedInspections = [];
-    }
-    setInspections(savedInspections);
-  }, []);
-
-  // --- Save to localStorage ---
-  useEffect(() => { localStorage.setItem("transformers", JSON.stringify(transformers)); }, [transformers]);
-  useEffect(() => { localStorage.setItem("inspections", JSON.stringify(inspections)); }, [inspections]);
 
   // --- Filtering ---
   useEffect(() => {
@@ -152,31 +115,68 @@ function App() {
     setShowTransformerModal(true);
   };
 
-  const handleAddTransformer = () => {
-    const t = { ...transformerForm, id: transformerForm.id || Date.now() };
-    setTransformers(prev => prev.some(item => item.id === t.id) ? prev.map(item => item.id === t.id ? t : item) : [...prev, t]);
-    setShowTransformerModal(false);
+  const handleAddTransformer = async () => {
+    try {
+      const response = await fetch(`${API_URL}/transformers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transformerForm),
+      });
+      const savedTransformer = await response.json();
+      setTransformers(prev => {
+        const exists = prev.some(t => t.id === savedTransformer.id);
+        if (exists) {
+          return prev.map(t => t.id === savedTransformer.id ? savedTransformer : t);
+        } else {
+          return [...prev, savedTransformer];
+        }
+      });
+      setShowTransformerModal(false);
+    } catch (error) {
+      console.error("Failed to save transformer:", error);
+    }
   };
 
   // --- Inspection handlers ---
   const handleInspectionChange = (e) => { setInspectionForm({ ...inspectionForm, [e.target.name]: e.target.value }); };
 
-  const handleScheduleInspection = () => {
+  const handleScheduleInspection = async () => {
     if (!inspectionForm.transformer || !inspectionForm.date || !inspectionForm.inspector) {
       alert("Please select a transformer, and fill in both the Date and Inspector fields.");
       return;
     }
 
     const transformerId = parseInt(inspectionForm.transformer, 10);
-    const newInspection = { ...inspectionForm, transformer: transformerId, id: Date.now(), maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" };
-    setInspections(prev => [...prev, newInspection]);
-    setShowAddInspectionModal(false);
-    setInspectionForm({ transformer: "", date: "", inspector: "", notes: "", maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" });
+    const newInspectionData = {
+      ...inspectionForm,
+      transformer: transformerId,
+      progressStatus: { thermalUpload: "Pending", aiAnalysis: "Pending", review: "Pending" },
+    };
+
+    try {
+      const response = await fetch(`${API_URL}/inspections`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newInspectionData),
+      });
+      const savedInspection = await response.json();
+      setInspections(prev => [...prev, savedInspection]);
+      setShowAddInspectionModal(false);
+      setInspectionForm({ transformer: "", date: "", inspector: "", notes: "", maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" });
+    } catch (error) {
+      console.error("Failed to schedule inspection:", error);
+    }
   };
 
   const handleViewInspection = (inspection) => { setViewInspectionData(inspection); setShowViewInspectionModal(true); };
-  const handleUpdateInspection = (updatedInspection) => { setInspections(inspections.map(i => (i.id === updatedInspection.id ? updatedInspection : i))); };
-  const handleUpdateTransformer = (updatedTransformer) => { setTransformers(prev => prev.map(t => (t.id === updatedTransformer.id ? updatedTransformer : t))); };
+  const handleUpdateInspection = async (updatedInspection) => {
+    await fetch(`${API_URL}/inspections/${updatedInspection.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedInspection) });
+    setInspections(inspections.map(i => (i.id === updatedInspection.id ? updatedInspection : i)));
+  };
+  const handleUpdateTransformer = async (updatedTransformer) => {
+    await fetch(`${API_URL}/transformers`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(updatedTransformer) });
+    setTransformers(prev => prev.map(t => (t.id === updatedTransformer.id ? updatedTransformer : t)));
+  };
 
   // --- Full-page inspection handlers ---
   const handleOpenTransformerInspectionsPage = (transformer) => { setSelectedTransformerForPage(transformer); setShowTransformerInspectionsPage(true); };
@@ -184,13 +184,13 @@ function App() {
 
   // --- Clear Local Storage handler ---
   const handleClearLocalStorage = () => { localStorage.clear(); window.location.reload(); };
-
+  
   return (
     <div className="app">
       <Sidebar setActivePage={setActivePage} />
       <div className="content">
         {activePage === "page2" ? (
-          <SettingsPage onClearData={handleClearLocalStorage} />
+          <SettingsPage onClearData={handleClearLocalStorage} transformers={transformers} inspections={inspections} />
         ) : showTransformerInspectionsPage && selectedTransformerForPage ? (
           <TransformerInspectionsPage
             transformer={selectedTransformerForPage}
