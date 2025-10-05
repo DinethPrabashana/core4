@@ -308,34 +308,33 @@ export default function InspectionViewModal({
 
     try {
       const form = new FormData();
-      // backend expects files; convert dataURI to File if necessary
       const bfile = baselineImage instanceof File ? baselineImage : (typeof baselineImage === 'string' && !baselineImage.includes('.png') ? dataURLtoFile(baselineImage, 'baseline.png') : null);
       const mfile = maintenanceImage instanceof File ? maintenanceImage : dataURLtoFile(maintenanceImage, 'maintenance.png');
       if (typeof baselineImage === 'string' && baselineImage.includes('.png')) {
         form.append('baseline_filename', baselineImage);
-      } else {
+      } else if (bfile) {
         form.append('baseline', bfile);
       }
       form.append('maintenance', mfile);
       form.append('inspection_id', inspection.id);
-  form.append('slider_percent', sliderPercent); // new unified sensitivity control
+      form.append('slider_percent', sliderPercent);
 
-      const res = await fetch("http://localhost:8000/analyze", {
-        method: "POST",
-        body: form
-      });
-
+      const res = await fetch("http://localhost:8000/analyze", { method: "POST", body: form });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(`AI analyze failed: ${txt}`);
       }
+      const j = await res.json();
 
-  const j = await res.json();
-      // Expect: { annotatedImage: <data-uri or url>, anomalies: [{id,x,y,w,h,confidence,severity}] }
-      // Use the image data URI sent directly from the backend. This is crucial.
-      setAnnotatedImage(j.annotatedImage);
+      // Prefer URL assets over data URI to avoid localStorage bloat
+      if (j.assetUrls && j.assetUrls.overlay) {
+        // build absolute URL (backend currently proxied or same origin assumption)
+        const overlayUrl = `http://localhost:8000${j.assetUrls.overlay}`;
+        setAnnotatedImage(overlayUrl);
+      } else if (j.annotatedImage) {
+        setAnnotatedImage(j.annotatedImage); // fallback
+      }
 
-      // map anomalies, ensure ids exist
       const mapped = (j.anomalies || []).map(a => ({
         id: a.id ?? `${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
         x: a.x, y: a.y, w: a.w, h: a.h,
@@ -347,11 +346,7 @@ export default function InspectionViewModal({
         deleted: false
       }));
       setAnomalies(mapped);
-      if (j.thresholdsUsed) {
-        setThresholdsUsed(j.thresholdsUsed);
-      } else {
-        setThresholdsUsed(null);
-      }
+      setThresholdsUsed(j.thresholdsUsed || null);
       setProgressStatus(prev => ({ ...prev, aiAnalysis: "Completed", review: "In Progress", thermalUpload: "Completed" }));
     } catch (err) {
       console.error(err);

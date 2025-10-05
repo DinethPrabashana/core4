@@ -2,6 +2,8 @@ import os
 import uuid
 import json
 import base64
+import shutil
+from datetime import datetime
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 
@@ -13,11 +15,13 @@ from anomaly_cv import detect_anomalies, BlobDet
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing for your frontend
 
-# Create directories for file processing if they don't exist
-TEMP_DIR = "temp_files"
-BASELINES_DIR = "baselines"
+# Directories
+TEMP_DIR = "temp_files"  # transient holding (may be minimal now)
+BASELINES_DIR = "baselines"  # permanent baselines uploaded via /upload_baseline
+INSPECTIONS_DIR = "inspections"  # persistent run history
 os.makedirs(TEMP_DIR, exist_ok=True)
 os.makedirs(BASELINES_DIR, exist_ok=True)
+os.makedirs(INSPECTIONS_DIR, exist_ok=True)
 
 def image_to_data_uri(filepath):
     """Convert an image file to a base64 data URI."""
@@ -27,33 +31,38 @@ def image_to_data_uri(filepath):
 
 @app.route('/analyze', methods=['POST'])
 def analyze_images_endpoint():
+    """Run anomaly detection and persist run artifacts for future phases.
+
+    Creates structure:
+      inspections/<inspection_id>/index.json
+      inspections/<inspection_id>/runs/<run_id>/baseline.png
+                                                 /maintenance.png
+                                                 /overlay.png
+                                                 /report.json
+                                                 /anomalies.json
+    Returns runId + assetUrls so frontend can load images without storing base64.
     """
-    Flask endpoint to receive images, run anomaly detection, and return results.
-    """
-    # Handle baseline: either uploaded file or stored filename
-    baseline_path = None
+    if 'maintenance' not in request.files:
+        return jsonify({"error": "Missing maintenance image"}), 400
+    maintenance_file = request.files['maintenance']
+
+    # Baseline selection
+    baseline_source_type = None
     if 'baseline_filename' in request.form:
         filename = request.form['baseline_filename']
         baseline_path = os.path.join(BASELINES_DIR, filename)
+        baseline_source_type = 'stored'
         if not os.path.exists(baseline_path):
             return jsonify({"error": "Baseline file not found"}), 404
     elif 'baseline' in request.files:
+        tmp_id = str(uuid.uuid4())
         baseline_file = request.files['baseline']
-        run_id = str(uuid.uuid4())
-        baseline_path = os.path.join(TEMP_DIR, f"{run_id}_baseline.png")
+        baseline_path = os.path.join(TEMP_DIR, f"{tmp_id}_baseline.png")
         baseline_file.save(baseline_path)
+        baseline_source_type = 'inline_upload'
     else:
         return jsonify({"error": "Missing baseline"}), 400
 
-    if 'maintenance' not in request.files:
-        return jsonify({"error": "Missing maintenance image"}), 400
-
-    maintenance_file = request.files['maintenance']
-    
-    # The frontend doesn't use the threshold with this advanced CV script,
-    # but we can keep the parameter for future use.
-    # Legacy threshold (unused now) and new slider_percent (0-100)
-    threshold = request.form.get('threshold', 0.5)  # kept for backward compatibility
     slider_percent = request.form.get('slider_percent')
     try:
         slider_percent_val = float(slider_percent) if slider_percent not in (None, "") else None
@@ -61,84 +70,154 @@ def analyze_images_endpoint():
         slider_percent_val = None
     inspection_id = request.form.get('inspection_id', 'unknown_inspection')
 
-    # --- File Handling ---
-    # Create unique filenames for maintenance and output
+    # Prepare directories
     run_id = str(uuid.uuid4())
-    maintenance_path = os.path.join(TEMP_DIR, f"{run_id}_maintenance.png")
-    overlay_path = os.path.join(TEMP_DIR, f"{run_id}_overlay.png")
-    report_path = os.path.join(TEMP_DIR, f"{run_id}_report.json")
+    inspection_root = os.path.join(INSPECTIONS_DIR, inspection_id)
+    runs_root = os.path.join(inspection_root, 'runs')
+    run_dir = os.path.join(runs_root, run_id)
+    os.makedirs(run_dir, exist_ok=True)
+    os.makedirs(runs_root, exist_ok=True)
 
-    # Save maintenance file
-    maintenance_file.save(maintenance_path)
+    # Final artifact paths
+    run_baseline = os.path.join(run_dir, 'baseline.png')
+    run_maintenance = os.path.join(run_dir, 'maintenance.png')
+    run_overlay = os.path.join(run_dir, 'overlay.png')
+    run_report = os.path.join(run_dir, 'report.json')
+    run_anomalies = os.path.join(run_dir, 'anomalies.json')
 
-    # Debug logging
-    print(f"Using baseline: {baseline_path}, size: {os.path.getsize(baseline_path) if os.path.exists(baseline_path) else 'N/A'}")
-    print(f"Saved maintenance to {maintenance_path}, size: {os.path.getsize(maintenance_path) if os.path.exists(maintenance_path) else 'N/A'}")
-
+    # Save maintenance and copy baseline snapshot
+    maintenance_file.save(run_maintenance)
     try:
-        # --- Run Core CV Logic ---
-        # Call the function from your anomaly_cv.py script
-        report = detect_anomalies(
+        shutil.copyfile(baseline_path, run_baseline)
+    except Exception as e:
+        return jsonify({"error": f"Failed to copy baseline: {e}"}), 500
+
+    # Run detection engine
+    try:
+        rep = detect_anomalies(
             transformer_id=inspection_id,
-            baseline_path=baseline_path,
-            maintenance_path=maintenance_path,
-            out_overlay_path=overlay_path,
-            out_json_path=report_path,
+            baseline_path=run_baseline,
+            maintenance_path=run_maintenance,
+            out_overlay_path=run_overlay,
+            out_json_path=run_report,
             slider_percent=slider_percent_val
         )
+    except Exception as e:
+        return jsonify({"error": f"Detection failed: {e}"}), 500
 
-        # --- Prepare Response for Frontend ---
-        # The frontend expects a specific format. We'll adapt the report.
-        
-        # 1. Convert the generated overlay image to a data URI
-        annotated_image_uri = image_to_data_uri(overlay_path)
-
-        # 2. Format the blob detections into the 'anomalies' list format
-        anomalies_list = []
-        for i, blob in enumerate(report.blobs):
-            x, y, w, h = blob.bbox
-            anomalies_list.append({
-                "id": f"ai_{i + 1}",
-                "x": x,
-                "y": y,
-                "w": w,
-                "h": h,
-                "confidence": blob.confidence,
-                "severity": blob.classification, # Maps to 'Faulty', 'Potentially Faulty'
-                "classification": blob.subtype, # Maps to 'LooseJoint', 'PointOverload', etc.
-                "comment": "",
-                "source": "ai"
-            })
-
-        # Parse thresholds_used from JSON file (already written). Instead of re-reading the file,
-        # we can construct it from the report object attributes.
-        thresholds_used = {
-            "t_pot": report.t_pot,
-            "t_fault": report.t_fault,
-            "base_t_pot": report.base_t_pot,
-            "base_t_fault": report.base_t_fault,
-            "slider_percent": report.slider_percent,
-            "scale_applied": report.scale_applied,
-            "source": report.threshold_source,
-            "ratio": report.ratio,
-            "mean_ssim": report.mean_ssim
-        }
-
-        return jsonify({
-            "annotatedImage": annotated_image_uri,
-            "anomalies": anomalies_list,
-            "thresholdsUsed": thresholds_used
+    # Build anomaly list for UI
+    anomalies_list = []
+    for i, b in enumerate(rep.blobs):
+        x, y, w, h = b.bbox
+        anomalies_list.append({
+            "id": f"ai_{i+1}",
+            "x": x, "y": y, "w": w, "h": h,
+            "confidence": b.confidence,
+            "severity": b.classification,
+            "classification": b.subtype,
+            "comment": "",
+            "source": "ai"
         })
 
-    except Exception as e:
-        return jsonify({"error": f"An error occurred during analysis: {str(e)}"}), 500
+    thresholds_used = {
+        "t_pot": rep.t_pot,
+        "t_fault": rep.t_fault,
+        "base_t_pot": rep.base_t_pot,
+        "base_t_fault": rep.base_t_fault,
+        "slider_percent": rep.slider_percent,
+        "scale_applied": rep.scale_applied,
+        "source": rep.threshold_source,
+        "ratio": rep.ratio,
+        "mean_ssim": rep.mean_ssim
+    }
 
-    finally:
-        # --- Cleanup ---
-        # Clean up the temporary files after the request is complete
-        for path in [maintenance_path, overlay_path, report_path]:
-            if os.path.exists(path):
-                os.remove(path)
+    # Persist anomalies.json
+    anomalies_payload = {
+        "runId": run_id,
+        "inspectionId": inspection_id,
+        "generatedAt": datetime.utcnow().isoformat() + 'Z',
+        "imageLevelLabel": rep.image_level_label,
+        "anomalies": anomalies_list,
+        "thresholdsUsed": thresholds_used,
+        "paths": {
+            "baseline": run_baseline,
+            "maintenance": run_maintenance,
+            "overlay": run_overlay,
+            "report": run_report
+        }
+    }
+    try:
+        with open(run_anomalies, 'w') as f:
+            json.dump(anomalies_payload, f, indent=2)
+    except Exception as e:
+        return jsonify({"error": f"Failed to write anomalies file: {e}"}), 500
+
+    # Update inspection index
+    index_path = os.path.join(inspection_root, 'index.json')
+    index_data = {"inspection_id": inspection_id, "runs": []}
+    if os.path.exists(index_path):
+        try:
+            with open(index_path, 'r') as f:
+                existing = json.load(f)
+            if isinstance(existing, dict) and 'runs' in existing:
+                index_data = existing
+        except Exception:
+            pass
+    index_data.setdefault('runs', []).append({
+        "run_id": run_id,
+        "timestamp": datetime.utcnow().isoformat() + 'Z',
+        "slider_percent": slider_percent_val,
+        "baseline_source_type": baseline_source_type,
+        "image_level_label": rep.image_level_label,
+        "num_anomalies": len(anomalies_list),
+        "paths": {
+            "baseline": run_baseline,
+            "maintenance": run_maintenance,
+            "overlay": run_overlay,
+            "report": run_report,
+            "anomalies": run_anomalies
+        },
+        "thresholdsUsed": thresholds_used
+    })
+    try:
+        with open(index_path, 'w') as f:
+            json.dump(index_data, f, indent=2)
+    except Exception as e:
+        return jsonify({"error": f"Failed to update index: {e}"}), 500
+
+    # Data URI for immediate display (optional) & asset URLs for efficient reloads
+    overlay_data_uri = image_to_data_uri(run_overlay)
+    base_asset_url = f"/inspection_asset/{inspection_id}/{run_id}"
+    asset_urls = {
+        "baseline": f"{base_asset_url}/baseline.png",
+        "maintenance": f"{base_asset_url}/maintenance.png",
+        "overlay": f"{base_asset_url}/overlay.png",
+        "report": f"{base_asset_url}/report.json",
+        "anomalies": f"{base_asset_url}/anomalies.json"
+    }
+
+    return jsonify({
+        "runId": run_id,
+        "annotatedImage": overlay_data_uri,  # backward compatibility
+        "assetUrls": asset_urls,
+        "anomalies": anomalies_list,
+        "thresholdsUsed": thresholds_used,
+        "imageLevelLabel": rep.image_level_label
+    })
+
+@app.route('/inspection_asset/<inspection_id>/<run_id>/<filename>', methods=['GET'])
+def inspection_asset(inspection_id, run_id, filename):
+    # Simple safe join to avoid traversal
+    if any(p.startswith('..') or '/' in p or '\\' in p for p in (inspection_id, run_id, filename)):
+        return jsonify({"error": "Invalid path"}), 400
+    path = os.path.join(INSPECTIONS_DIR, inspection_id, 'runs', run_id, filename)
+    if not os.path.exists(path):
+        return jsonify({"error": "Not found"}), 404
+    if filename.endswith('.png'):
+        return send_file(path, mimetype='image/png')
+    if filename.endswith('.json'):
+        return send_file(path, mimetype='application/json')
+    return send_file(path)
 
 @app.route('/save_annotations', methods=['POST'])
 def save_annotations():

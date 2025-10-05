@@ -89,8 +89,18 @@ function App() {
       allTransformers = [...transformersToAdd, ...savedTransformers];
     }
 
-    setTransformers(allTransformers);
-    localStorage.setItem("transformers", JSON.stringify(allTransformers));
+    // Strip any large base64 baseline images before persisting to localStorage
+    const stripBase64 = v => (typeof v === 'string' && v.startsWith('data:image')) ? null : v;
+    const migrated = allTransformers.map(t => ({
+      ...t,
+      baselineImage: stripBase64(t.baselineImage)
+    }));
+    setTransformers(migrated);
+    try {
+      localStorage.setItem("transformers", JSON.stringify(migrated));
+    } catch (e) {
+      console.warn('Initial transformer save skipped (quota or error).', e);
+    }
   }, []);
 
   // --- Load inspections ---
@@ -105,8 +115,21 @@ function App() {
   }, []);
 
   // --- Save to localStorage ---
-  useEffect(() => { localStorage.setItem("transformers", JSON.stringify(transformers)); }, [transformers]);
-  useEffect(() => { localStorage.setItem("inspections", JSON.stringify(inspections)); }, [inspections]);
+  useEffect(() => {
+    const stripped = transformers.map(t => ({
+      ...t,
+      baselineImage: (typeof t.baselineImage === 'string' && t.baselineImage.startsWith('data:image')) ? null : t.baselineImage
+    }));
+    try { localStorage.setItem("transformers", JSON.stringify(stripped)); } catch (e) { /* quota exceeded - ignore */ }
+  }, [transformers]);
+  useEffect(() => {
+    const stripped = inspections.map(i => ({
+      ...i,
+      maintenanceImage: (typeof i.maintenanceImage === 'string' && i.maintenanceImage.startsWith('data:image')) ? null : i.maintenanceImage,
+      annotatedImage: (typeof i.annotatedImage === 'string' && i.annotatedImage.startsWith('data:image')) ? null : i.annotatedImage
+    }));
+    try { localStorage.setItem("inspections", JSON.stringify(stripped)); } catch (e) { /* quota exceeded - ignore */ }
+  }, [inspections]);
 
   // --- Filtering ---
   useEffect(() => {
