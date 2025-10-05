@@ -9,6 +9,7 @@ The user-friendly interface allows inspectors to upload images, review AI-genera
 ## Key Features
 
 - **Image Comparison:** Upload and compare a standard "Baseline" image with a "Thermal" (maintenance) image.
+- **Persistent Data Storage:** All transformer and inspection data is saved in a robust SQLite database.
 - **AI-Powered Analysis:** A Python backend uses computer vision techniques (image alignment, color difference analysis) to automatically detect hot spots and other anomalies.
 - **Anomaly Classification:** AI automatically classifies anomalies as `Faulty` or `Potentially Faulty` and identifies subtypes like `LooseJoint` or `PointOverload`.
 - **Interactive Annotations:** View AI-detected anomalies as bounding boxes directly on the thermal image.
@@ -24,8 +25,8 @@ The user-friendly interface allows inspectors to upload images, review AI-genera
 ## Tech Stack
 
 - **Frontend:** React.js
-- **Backend:** Python with Flask
-- **Computer Vision:** OpenCV, scikit-image, NumPy
+- **Backend:** Python with Flask, SQLite Database
+- **Computer Vision:** OpenCV
 
 ---
 
@@ -33,7 +34,7 @@ The user-friendly interface allows inspectors to upload images, review AI-genera
 
 The project is divided into two main parts:
 
-```
+```text
 /
 ├── backend/      # Contains the Python Flask server and all AI/CV logic
 └── core4/        # Contains the React.js frontend application
@@ -52,7 +53,7 @@ To run this project on your local machine, you will need to set up both the back
 
 ### 1. Backend Setup (Flask Server)
 
-The backend is responsible for all the image processing and AI analysis.
+The backend is responsible for all image processing, AI analysis, and data persistence.
 
 1.  **Navigate to the backend directory:**
     ```bash
@@ -75,7 +76,13 @@ The backend is responsible for all the image processing and AI analysis.
     pip install Flask Flask-Cors numpy opencv-python scikit-image
     ```
 
-4.  **Run the backend server:**
+4.  **Initialize the database:**
+    This command only needs to be run once. It will create the `backend.db` file and set up the necessary tables.
+    ```bash
+    python database.py
+    ```
+
+5.  **Run the backend server:**
     ```bash
     python app.py
     ```
