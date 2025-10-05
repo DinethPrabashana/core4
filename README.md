@@ -112,3 +112,9 @@ The frontend provides the user interface for interacting with the application.
     ```
 
     Your web browser should automatically open to `http://localhost:3000`, where you can now use the application. The frontend will communicate with the backend server you started in the other terminal.
+
+
+## Known Limitations
+
+- **The Flask API used in this project relies on Flask’s built-in development server, which is not suitable for production deployment. It is intended for testing and development only and may have performance and security limitations under real-world usage.**
+- ****
