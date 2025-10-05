@@ -57,48 +57,59 @@ def to_gray(img_bgr: np.ndarray) -> np.ndarray:
 
 def ecc_align(base_gray: np.ndarray, mov_gray: np.ndarray) -> Tuple[np.ndarray, np.ndarray, bool, float]:
     """
-    Try ECC alignment (affine). If it fails, fall back to ORB+RANSAC homography.
+    Robust alignment:
+      1) ECC on Canny edges with an inputMask (ignores legend/sky).
+      2) Fallback: ORB + KNN (Lowe ratio) + RANSAC homography.
     Returns: (warp_matrix, aligned_gray, ok, score)
       - warp_matrix is 2x3 (affine) or 3x3 (homography)
       - score is ECC correlation for ECC; 0.0 for homography fallback
     """
+    H, W = base_gray.shape
+
+    # Mask: keep transformer region, drop right colorbar + top sky band (tune as needed)
+    inputMask = np.ones_like(base_gray, np.uint8) * 255
+    inputMask[:, int(0.88 * W):] = 0   # right 12% (palette/legend)
+    inputMask[:int(0.15 * H), :] = 0   # top 15% (sky/roof band)
+
+    # Edge images (photometrically robust)
+    base_e = cv.Canny(base_gray, 50, 150)
+    mov_e  = cv.Canny(mov_gray,  50, 150)
+
     warp_mode = cv.MOTION_AFFINE
     warp = np.eye(2, 3, dtype=np.float32)
-    criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 200, 1e-6)
+    criteria = (cv.TERM_CRITERIA_EPS | cv.TERM_CRITERIA_COUNT, 300, 1e-6)
+
     try:
-        cc, warp = cv.findTransformECC(base_gray, mov_gray, warp, warp_mode, criteria)
+        cc, warp = cv.findTransformECC(
+            base_e, mov_e, warp, warp_mode, criteria, inputMask=inputMask
+        )
         aligned = cv.warpAffine(
-            mov_gray, warp,
-            (base_gray.shape[1], base_gray.shape[0]),
+            mov_gray, warp, (W, H),
             flags=cv.INTER_LINEAR + cv.WARP_INVERSE_MAP
         )
         return warp, aligned, True, float(cc)
     except cv.error:
-        # ORB + RANSAC Homography (feature-based) fallback.
+        # Feature fallback: ORB + KNN(Lowe ratio) + RANSAC Homography
         orb = cv.ORB_create(5000)
         k1, d1 = orb.detectAndCompute(base_gray, None)
-        k2, d2 = orb.detectAndCompute(mov_gray, None)
+        k2, d2 = orb.detectAndCompute(mov_gray,  None)
         if d1 is None or d2 is None:
             return np.eye(2,3,np.float32), mov_gray, False, 0.0
 
-        matcher = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=True)
-        matches = matcher.match(d1, d2)
-        matches = sorted(matches, key=lambda m: m.distance)[:500]
-        if len(matches) < 8:
+        bf = cv.BFMatcher(cv.NORM_HAMMING, crossCheck=False)
+        knn = bf.knnMatch(d1, d2, k=2)
+        good = [m for m,n in knn if n is not None and m.distance < 0.75 * n.distance]
+        if len(good) < 8:
             return np.eye(2,3,np.float32), mov_gray, False, 0.0
 
-        pts1 = np.float32([k1[m.queryIdx].pt for m in matches])
-        pts2 = np.float32([k2[m.trainIdx].pt for m in matches])
-        H, mask = cv.findHomography(pts2, pts1, cv.RANSAC, 3.0)
-        if H is None:
+        pts1 = np.float32([k1[m.queryIdx].pt for m in good])
+        pts2 = np.float32([k2[m.trainIdx].pt for m in good])
+        Hm, mask = cv.findHomography(pts2, pts1, cv.RANSAC, 3.0)
+        if Hm is None:
             return np.eye(2,3,np.float32), mov_gray, False, 0.0
 
-        aligned = cv.warpPerspective(
-            mov_gray, H,
-            (base_gray.shape[1], base_gray.shape[0])
-        )
-        # IMPORTANT: return full 3x3 homography
-        return H.astype(np.float32), aligned, True, 0.0
+        aligned = cv.warpPerspective(mov_gray, Hm, (W, H))
+        return Hm.astype(np.float32), aligned, True, 0.0
 
 def lab_and_hsv(img_bgr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     img_rgb = cv.cvtColor(img_bgr, cv.COLOR_BGR2RGB)
@@ -107,17 +118,14 @@ def lab_and_hsv(img_bgr: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     return lab, hsv
 
 def deltaE_map(lab_base: np.ndarray, lab_maint: np.ndarray) -> np.ndarray:
-    # Vectorized ΔE2000 across image
     return deltaE_ciede2000(lab_base, lab_maint).astype(np.float32)
 
 def hot_color_mask(hsv: np.ndarray) -> np.ndarray:
-    # Reds/oranges/yellows in OpenCV HSV (H:0..179).
     m_red1   = cv.inRange(hsv, (0,   90, 120), (10,  255, 255))
     m_red2   = cv.inRange(hsv, (170, 90, 120), (179, 255, 255))
     m_orange = cv.inRange(hsv, (11,  80, 120), (25,  255, 255))
     m_yellow = cv.inRange(hsv, (26,  60, 120), (35,  255, 255))
-    mask = cv.bitwise_or(cv.bitwise_or(m_red1, m_red2), cv.bitwise_or(m_orange, m_yellow))
-    return mask
+    return cv.bitwise_or(cv.bitwise_or(m_red1, m_red2), cv.bitwise_or(m_orange, m_yellow))
 
 def morphology_clean(mask: np.ndarray) -> np.ndarray:
     k = cv.getStructuringElement(cv.MORPH_ELLIPSE, (3,3))
@@ -126,12 +134,11 @@ def morphology_clean(mask: np.ndarray) -> np.ndarray:
     return mask
 
 def blob_props(bin_mask: np.ndarray, dE: np.ndarray, hsv: np.ndarray) -> List[Dict[str,Any]]:
-    # Connected components and basic stats
     n, labels, stats, centroids = cv.connectedComponentsWithStats(bin_mask, connectivity=8)
     out = []
     for lab in range(1, n):
         x,y,w,h,area = stats[lab]
-        if area < 25:    # ignore tiny speckles
+        if area < 25:
             continue
         roi = (labels[y:y+h, x:x+w] == lab)
         dE_roi = dE[y:y+h, x:x+w][roi]
@@ -142,7 +149,6 @@ def blob_props(bin_mask: np.ndarray, dE: np.ndarray, hsv: np.ndarray) -> List[Di
         mean_s = float(hsv_roi[:,1].mean()) if hsv_roi.size else 0.0
         mean_v = float(hsv_roi[:,2].mean()) if hsv_roi.size else 0.0
 
-        # Elongation via covariance eigenvalue ratio
         pts = np.column_stack(np.where(roi))
         if len(pts) >= 10:
             cov = np.cov(pts.astype(np.float32).T)
@@ -160,10 +166,6 @@ def blob_props(bin_mask: np.ndarray, dE: np.ndarray, hsv: np.ndarray) -> List[Di
 
 # ---------- Topology helpers (wire skeleton, joints, coverage) ----------
 def build_wire_skeleton(img_bgr: np.ndarray, hot_mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Build a binary 1-px skeleton of likely wires and a thin 'wire band' for sampling.
-    We union Canny edges with a slightly dilated hot mask (to include warm wires).
-    """
     gray = cv.cvtColor(img_bgr, cv.COLOR_BGR2GRAY)
     edges = cv.Canny(gray, 50, 150)
     k3 = cv.getStructuringElement(cv.MORPH_RECT, (3,3))
@@ -171,10 +173,8 @@ def build_wire_skeleton(img_bgr: np.ndarray, hot_mask: np.ndarray) -> Tuple[np.n
     edges = cv.dilate(edges, k3, iterations=1)
     hot_dil = cv.dilate(hot_mask, k5, iterations=1)
     union = cv.bitwise_or(edges, hot_dil)
-    # skeletonize expects boolean
     skel_bool = skeletonize((union > 0).astype(np.uint8).astype(bool))
     skel = (skel_bool.astype(np.uint8) * 255)
-    # a slim band around the skeleton for sampling "rest of wire"
     wire_band = cv.dilate(skel, k3, iterations=1)
     return skel, wire_band
 
@@ -187,9 +187,6 @@ def _neighbors8(y: int, x: int, h: int, w: int):
                 yield ny, nx
 
 def find_skeleton_nodes(skel: np.ndarray) -> Tuple[List[Tuple[int,int]], List[Tuple[int,int]]]:
-    """
-    Return (endpoints, junctions) on a 1-px skeleton using 8-neighborhood degree.
-    """
     s = (skel > 0).astype(np.uint8)
     H, W = s.shape
     endpoints, junctions = [], []
@@ -213,10 +210,6 @@ def is_near_joint(centroid_xy: Tuple[float,float], joints: List[Tuple[int,int]],
 
 def wire_hot_coverage(bbox: Tuple[int,int,int,int], skel: np.ndarray, hot_mask: np.ndarray,
                       expand: int = 10) -> Tuple[float, int, int, float]:
-    """
-    Compute coverage of 'hot' along skeleton within an expanded bbox window.
-    Returns: (coverage_in_0_1, hot_len_px, wire_len_px, cool_frac_around)
-    """
     H, W = skel.shape
     x,y,w,h = bbox
     x0 = max(0, x - expand); y0 = max(0, y - expand)
@@ -225,7 +218,6 @@ def wire_hot_coverage(bbox: Tuple[int,int,int,int], skel: np.ndarray, hot_mask: 
     skel_roi = skel[y0:y1, x0:x1] > 0
     hot_roi  = hot_mask[y0:y1, x0:x1] > 0
 
-    # hot skeleton = skeleton pixels that are also hot (dilate hot a bit to be tolerant)
     k3 = cv.getStructuringElement(cv.MORPH_RECT, (3,3))
     hot_roi_d = cv.dilate((hot_roi.astype(np.uint8))*255, k3, iterations=1) > 0
 
@@ -233,7 +225,6 @@ def wire_hot_coverage(bbox: Tuple[int,int,int,int], skel: np.ndarray, hot_mask: 
     hot_len  = int((skel_roi & hot_roi_d).sum())
     coverage = (hot_len / wire_len) if wire_len > 0 else 0.0
 
-    # "rest-of-wire cool" measure: in a slim band, outside hot
     band = cv.dilate((skel_roi.astype(np.uint8))*255, k3, iterations=1) > 0
     cool_pixels = int((band & (~hot_roi)).sum())
     total_band  = int(band.sum())
@@ -247,21 +238,22 @@ def classify_blob_enhanced(
     dE_thr_pot=8.0,
     skel: np.ndarray = None,
     joints: List[Tuple[int,int]] = None,
-    hot_mask: np.ndarray = None
+    hot_mask: np.ndarray = None,
+    abs_hot_mask: np.ndarray = None
 ) -> Tuple[str,str,float,float]:
     """
     Returns (label, subtype, confidence, severity)
-    subtype from: 'LooseJoint', 'PointOverload', 'FullWireOverload', 'None'
+    Adds promotions using maintenance-only absolute heat and topology.
     """
     h,s,v = b['mean_hsv']
     elong = b['elongation']
     peak, mean = b['peak_deltaE'], b['mean_deltaE']
 
-    # color bands (OpenCV Hue 0..179)
+    # Color bands (OpenCV Hue 0..179)
     is_red_or_orange = (h <= 10 or h >= 170 or (11 <= h <= 25))
     is_yellowish     = (26 <= h <= 35)
 
-    # initial severity class (same as before)
+    # Base severity via ΔE + color (as before)
     faulty = is_red_or_orange and (peak >= dE_thr_fault)
     potential = (is_yellowish and peak >= dE_thr_pot) or ((elong >= 3.0) and mean >= dE_thr_pot)
 
@@ -269,65 +261,59 @@ def classify_blob_enhanced(
     near_joint = False
     coverage = 0.0
     cool_frac = 0.0
-
     if skel is not None and hot_mask is not None and joints is not None:
         near_joint = is_near_joint(b['centroid'], joints, r=8)
         coverage, hot_len, wire_len, cool_frac = wire_hot_coverage(b['bbox'], skel, hot_mask, expand=10)
 
-    # Decide subtype
     subtype = 'None'
     label = 'Normal'
 
     if near_joint:
         subtype = 'LooseJoint'
-        if faulty:
-            label = 'Faulty'
-        elif potential:
-            label = 'Potentially Faulty'
-        else:
-            label = 'Normal'
+        if faulty: label = 'Faulty'
+        elif potential: label = 'Potentially Faulty'
     else:
-        # On-wire scenario
-        # Define thresholds (tuneable)
-        FULL_COVER_THR = 0.60      # >=60% of local skeleton hot => FullWireOverload
-        POINT_COVER_THR = 0.25     # <25% coverage and rest cool => PointOverload
-        REST_COOL_THR = 0.60       # >=60% of band cool
-
+        FULL_COVER_THR = 0.60
+        POINT_COVER_THR = 0.25
+        REST_COOL_THR = 0.60
         if coverage >= FULL_COVER_THR:
             subtype = 'FullWireOverload'
-            if faulty or potential:
-                # As per your doc, full wire is typically Potential
-                label = 'Potentially Faulty'
-            else:
-                label = 'Normal'
+            label = 'Potentially Faulty' if (faulty or potential) else 'Normal'
         elif (coverage < POINT_COVER_THR and cool_frac >= REST_COOL_THR):
             subtype = 'PointOverload'
-            if faulty:
-                label = 'Faulty'
-            elif potential:
-                label = 'Potentially Faulty'
-            else:
-                label = 'Normal'
+            if faulty: label = 'Faulty'
+            elif potential: label = 'Potentially Faulty'
         else:
-            # Ambiguous middle case: prefer PointOverload (Potential) when there is some change
             subtype = 'PointOverload' if (faulty or potential) else 'None'
-            if faulty:
-                label = 'Faulty'
-            elif potential:
-                label = 'Potentially Faulty'
-            else:
-                label = 'Normal'
+            if faulty: label = 'Faulty'
+            elif potential: label = 'Potentially Faulty'
 
-    # Confidence & severity (reuse your ΔE-based scoring; add tiny bonus if topology decisive)
+    # ---------- Promotion using maintenance-only absolute heat ----------
+    if label == 'Normal' and abs_hot_mask is not None:
+        x,y,w,h_box = b['bbox']
+        abs_roi = abs_hot_mask[y:y+h_box, x:x+w]
+        abs_frac = float(abs_roi.sum()) / float(max(1, w*h_box) * 255.0)  # fraction of hot pixels in bbox
+        mean_v = b['mean_hsv'][2]  # mean V over blob (hot region)
+
+        # Promote to LooseJoint (Faulty) if very hot and at a joint
+        if near_joint and (mean_v >= 200 or abs_frac >= 0.20):
+            label, subtype = 'Faulty', 'LooseJoint'
+
+        # Promote to PointOverload (Faulty) if localized hot spot on otherwise cool wire
+        elif (coverage < 0.25 and cool_frac >= 0.60 and abs_frac >= 0.20):
+            label, subtype = 'Faulty', 'PointOverload'
+
+        # Promote to FullWireOverload (Potential) if large coverage but ΔE was suppressed
+        elif coverage >= 0.60 and abs_frac >= 0.40:
+            label, subtype = 'Potentially Faulty', 'FullWireOverload'
+    # ----------------------------------------------------
+
+    # Confidence & severity
     color_bonus = 0.15 if is_red_or_orange else (0.05 if is_yellowish else 0.0)
     conf = 0.5 + 0.5 * np.tanh((peak - dE_thr_pot)/8.0) + color_bonus
-    # topology bonus
-    if subtype == 'FullWireOverload' and coverage >= 0.6:
-        conf += 0.07
-    if subtype == 'PointOverload' and coverage < 0.25 and cool_frac >= 0.6:
-        conf += 0.07
-    if subtype == 'LooseJoint' and near_joint:
-        conf += 0.05
+    if subtype == 'FullWireOverload' and coverage >= 0.6: conf += 0.07
+    if subtype == 'PointOverload' and coverage < 0.25 and cool_frac >= 0.6: conf += 0.07
+    if subtype == 'LooseJoint' and near_joint: conf += 0.05
     conf = float(np.clip(conf, 0.0, 1.0))
 
     sev  = float(np.clip((0.6*peak + 0.4*mean) + 0.005*b['area'], 0, 100))
@@ -356,9 +342,15 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
     base_bgr = read_bgr(baseline_path)
     ment_bgr = read_bgr(maintenance_path)
 
-    # Align maintenance to baseline (gray)
+    # Pre-resize maintenance to baseline size (critical when resolutions differ a lot)
     base_gray = to_gray(base_bgr)
     ment_gray = to_gray(ment_bgr)
+    if ment_gray.shape != base_gray.shape:
+        Hs, Ws = base_gray.shape
+        ment_bgr = cv.resize(ment_bgr, (Ws, Hs), interpolation=cv.INTER_LINEAR)
+        ment_gray = cv.resize(ment_gray, (Ws, Hs), interpolation=cv.INTER_LINEAR)
+
+    # Align maintenance to baseline (robust ECC + feature fallback)
     warp, ment_aligned_gray, ok, score = ecc_align(base_gray, ment_gray)
 
     # Apply the SAME warp to color for consistent SSIM/ΔE geometry
@@ -381,12 +373,11 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
     # SSIM sanity (structure similarity)
     mean_ssim, _ = ssim(base_gray, ment_aligned_gray, full=True, data_range=255)
 
-    # --- Base adaptive thresholds (unchanged defaults) ---
+    # --- Base adaptive thresholds ---
     base_t_pot  = 8.0  if mean_ssim >= 0.70 else 10.0
     base_t_fault = 12.0 if mean_ssim >= 0.70 else 14.0
     ratio = base_t_fault / base_t_pot
 
-    # --- Slider scaling (gentle) ---
     threshold_source = "adaptive_ssim"
     scale_applied = None
     if slider_percent is not None:
@@ -396,10 +387,8 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
             p = None
         if p is not None:
             p = max(0.0, min(100.0, p))
-            # scale in [0.8,1.2]: p=100 -> 0.8 (more sensitive), p=0 -> 1.2 (stricter)
-            scale_applied = 1.2 - 0.4*(p/100.0)
+            scale_applied = 1.2 - 0.4*(p/100.0)  # p=100 -> 0.8 (more sensitive), p=0 -> 1.2 (stricter)
             t_pot = base_t_pot * scale_applied
-            # clamp to practical ranges
             if mean_ssim >= 0.70:
                 t_pot = float(np.clip(t_pot, 6.0, 11.0))
             else:
@@ -413,6 +402,15 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
         t_pot = base_t_pot
         t_fault = base_t_fault
 
+    # --- Palette mismatch softening (scene histogram correlation) ---
+    hist_b = cv.calcHist([base_gray],[0],None,[64],[0,256]);  hist_b = cv.normalize(hist_b, None).flatten()
+    hist_m = cv.calcHist([ment_aligned_gray],[0],None,[64],[0,256]);  hist_m = cv.normalize(hist_m, None).flatten()
+    hist_corr = float(np.corrcoef(hist_b, hist_m)[0,1])
+    if hist_corr < 0.60:  # tune 0.55–0.70 depending on data
+        t_pot   = max(6.0,  t_pot   - 2.0)
+        t_fault = max(10.0, t_fault - 2.0)
+        threshold_source += "+palette_soften"
+
     # Convert to LAB/HSV after thresholds decided
     base_lab, _ = lab_and_hsv(base_bgr)
     ment_lab, ment_hsv = lab_and_hsv(ment_aligned_bgr)
@@ -420,13 +418,22 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
     # ΔE2000 map
     dE = deltaE_map(base_lab, ment_lab)
 
-    # Hot color gating + ΔE threshold (adaptive + slider)
+    # Hot color gating + ΔE threshold
     mask_hot = hot_color_mask(ment_hsv)
     mask_delta = (dE >= t_pot).astype(np.uint8)*255
     mask = cv.bitwise_and(mask_hot, mask_delta)
     mask = morphology_clean(mask)
 
-    # --- NEW: Build wire skeleton & joints from the aligned maintenance image ---
+    # --- Absolute hotness (maintenance-only) for promotions ---
+    hch, sch, vch = cv.split(ment_hsv)
+    v98 = float(np.percentile(vch, 98))
+    abs_hot = (
+        ((hch <= 10) | (hch >= 170) | ((hch >= 11) & (hch <= 25))) &  # red/orange
+        (sch >= 80) &
+        (vch >= max(200.0, v98))
+    ).astype(np.uint8) * 255
+
+    # --- Build wire skeleton & joints from the aligned maintenance image ---
     skel, wire_band = build_wire_skeleton(ment_aligned_bgr, mask)
     endpoints, junctions = find_skeleton_nodes(skel)
     joints = endpoints + junctions  # treat both as "joint" candidates
@@ -437,7 +444,7 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
     for p in props:
         cls, subtype, conf, sev = classify_blob_enhanced(
             p, dE_thr_fault=t_fault, dE_thr_pot=t_pot,
-            skel=skel, joints=joints, hot_mask=mask
+            skel=skel, joints=joints, hot_mask=mask, abs_hot_mask=abs_hot
         )
         blobs.append(BlobDet(label=p['label'], bbox=p['bbox'], area=p['area'],
                              centroid=p['centroid'], mean_deltaE=p['mean_deltaE'], peak_deltaE=p['peak_deltaE'],
@@ -490,7 +497,7 @@ def detect_anomalies(transformer_id: str, baseline_path: str, maintenance_path: 
 
 if __name__ == "__main__":
     # Example:
-    # python anomaly_cv.py TX001 baseline.jpg maintenance.jpg out_overlay.png out_report.json
+    # python anomaly_cv.py TX001 baseline.jpg maintenance.jpg out_overlay.png out_report.json [slider_percent]
     if len(sys.argv) not in (6,7):
         print("Usage: python anomaly_cv.py <transformer_id> <baseline.jpg> <maintenance.jpg> <overlay.png> <report.json> [slider_percent]")
         sys.exit(1)
