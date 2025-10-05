@@ -13,6 +13,7 @@ export default function TransformerList({
   setShowModal,
   transformers,
   setTransformers,
+  deleteTransformer,
 }) {
   const [imageURL, setImageURL] = useState(null);
 
@@ -38,8 +39,8 @@ export default function TransformerList({
 
   const handleDelete = (t) => {
     if (window.confirm("Are you sure you want to delete this transformer?")) {
-      setTransformers(transformers.filter((item) => item.id !== t.id));
       if (selectedTransformer?.id === t.id) setSelectedTransformer(null);
+      deleteTransformer(t.id);
     }
   };
 

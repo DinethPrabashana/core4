@@ -137,6 +137,19 @@ function App() {
     }
   };
 
+  const handleDeleteTransformer = async (transformerId) => {
+    try {
+      const response = await fetch(`${API_URL}/transformers/${transformerId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setTransformers(prev => prev.filter(t => t.id !== transformerId));
+      }
+    } catch (error) {
+      console.error("Failed to delete transformer:", error);
+    }
+  };
+
   // --- Inspection handlers ---
   const handleInspectionChange = (e) => { setInspectionForm({ ...inspectionForm, [e.target.name]: e.target.value }); };
 
@@ -165,6 +178,19 @@ function App() {
       setInspectionForm({ transformer: "", date: "", inspector: "", notes: "", maintenanceImage: null, maintenanceUploadDate: null, maintenanceWeather: "Sunny" });
     } catch (error) {
       console.error("Failed to schedule inspection:", error);
+    }
+  };
+
+  const handleDeleteInspection = async (inspectionId) => {
+    try {
+      const response = await fetch(`${API_URL}/inspections/${inspectionId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setInspections(prev => prev.filter(i => i.id !== inspectionId));
+      }
+    } catch (error) {
+      console.error("Failed to delete inspection:", error);
     }
   };
 
@@ -200,6 +226,7 @@ function App() {
             transformers={transformers}
             onBack={handleBackToMain}
             onViewInspection={handleViewInspection}
+            deleteInspection={handleDeleteInspection}
           />
         ) : (
           <>
@@ -209,6 +236,7 @@ function App() {
                 transformers={transformers}
                 filteredTransformers={filteredTransformers}
                 setTransformers={setTransformers}
+                deleteTransformer={handleDeleteTransformer}
                 selectedTransformer={selectedTransformer}
                 setSelectedTransformer={setSelectedTransformer}
                 searchFieldDetails={searchFieldDetails}
@@ -232,6 +260,7 @@ function App() {
                 setSearchQueryInspection={setSearchQueryInspection}
                 openAddInspectionModal={() => setShowAddInspectionModal(true)}
                 onViewInspections={handleOpenTransformerInspectionsPage}
+                deleteInspection={handleDeleteInspection}
               />
             )}
           </>

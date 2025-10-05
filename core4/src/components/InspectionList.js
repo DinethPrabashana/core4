@@ -13,11 +13,11 @@ export default function InspectionList({
   setSearchQueryInspection,
   openAddInspectionModal,
   onViewInspections,
+  deleteInspection,
 }) {
 
   const handleDeleteInspection = (inspectionId) => {
-    setInspections(prev => prev.filter(i => i.id !== inspectionId));
-    setFilteredInspections(prev => prev.filter(i => i.id !== inspectionId));
+    deleteInspection(inspectionId);
   };
 
   const handleViewTransformerInspections = (transformer) => {

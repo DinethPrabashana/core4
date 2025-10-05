@@ -9,7 +9,8 @@ export default function TransformerInspectionsPage({
   setInspections,
   setFilteredInspections,
   onBack,
-  onViewInspection
+  onViewInspection,
+  deleteInspection
 }) {
   const [showAddInspectionModal, setShowAddInspectionModal] = useState(false);
   const [newInspectionForm, setNewInspectionForm] = useState({
@@ -34,8 +35,9 @@ export default function TransformerInspectionsPage({
   };
 
   const handleDeleteInspection = (id) => {
-    setInspections(prev => prev.filter(i => i.id !== id));
-    setFilteredInspections(prev => prev.filter(i => i.id !== id));
+    if (window.confirm("Are you sure you want to delete this inspection?")) {
+      deleteInspection(id);
+    }
   };
 
   const handleAddInspection = () => {
