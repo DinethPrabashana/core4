@@ -2,7 +2,7 @@ import os
 import uuid
 import json
 import base64
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
 # Import logic
@@ -12,7 +12,20 @@ import database as db
 # --- Flask App Setup ---
 
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing for your frontend
+# Enable CORS with proper configuration for all methods and headers
+CORS(app, resources={
+    r"/api/*": {
+        "origins": "*",
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Disposition"]
+    },
+    r"/analyze": {
+        "origins": "*",
+        "methods": ["POST", "OPTIONS"],
+        "allow_headers": ["Content-Type"]
+    }
+})
 
 # Create a temporary directory for file processing if it doesn't exist
 TEMP_DIR = "temp_files"
@@ -160,6 +173,94 @@ def handle_inspection(id):
     if request.method == 'DELETE':
         db.delete_inspection(id)
         return jsonify({'message': 'Inspection deleted'}), 200
+
+# --- Annotation API Endpoints ---
+
+@app.route('/api/annotations/<int:inspection_id>', methods=['GET', 'POST'])
+def handle_annotations(inspection_id):
+    """Get or save annotations for a specific inspection."""
+    try:
+        if request.method == 'GET':
+            annotations = db.get_annotations(inspection_id)
+            return jsonify(annotations)
+        
+        if request.method == 'POST':
+            data = request.json
+            annotations = data.get('annotations', [])
+            user_id = data.get('user_id', 'Admin')
+            transformer_id = data.get('transformer_id')
+            
+            # Save annotations
+            db.save_annotations(inspection_id, annotations, user_id)
+            
+            # Log the action for each annotation
+            for annot in annotations:
+                action_type = 'added' if annot.get('source') == 'user' else 'edited'
+                if annot.get('deleted'):
+                    action_type = 'deleted'
+                
+                # Prepare AI prediction and user annotation data
+                ai_prediction = None
+                user_annotation = annot.copy()
+                
+                if annot.get('source') == 'ai':
+                    ai_prediction = {
+                        'id': annot['id'],
+                        'x': annot['x'],
+                        'y': annot['y'],
+                        'w': annot['w'],
+                        'h': annot['h'],
+                        'confidence': annot.get('confidence'),
+                        'severity': annot.get('severity'),
+                        'classification': annot.get('classification')
+                    }
+                
+                db.log_annotation_action(
+                    inspection_id=inspection_id,
+                    transformer_id=transformer_id,
+                    action_type=action_type,
+                    annotation_data=annot,
+                    ai_prediction=ai_prediction,
+                    user_annotation=user_annotation,
+                    user_id=user_id,
+                    notes=annot.get('comment')
+                )
+            
+            return jsonify({'message': 'Annotations saved successfully'}), 200
+    except Exception as e:
+        print(f"Error in handle_annotations: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/annotation-logs', methods=['GET'])
+def get_annotation_logs():
+    """Get all annotation logs or filter by inspection_id."""
+    try:
+        inspection_id = request.args.get('inspection_id', type=int)
+        logs = db.get_annotation_logs(inspection_id)
+        return jsonify(logs)
+    except Exception as e:
+        print(f"Error in get_annotation_logs: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/annotation-logs/export/json', methods=['GET'])
+def export_annotation_logs_json():
+    """Export annotation logs as JSON."""
+    json_data = db.export_annotation_logs_json()
+    response = Response(json_data, mimetype='application/json')
+    response.headers['Content-Disposition'] = 'attachment; filename=annotation_logs.json'
+    return response
+
+@app.route('/api/annotation-logs/export/csv', methods=['GET'])
+def export_annotation_logs_csv():
+    """Export annotation logs as CSV."""
+    csv_data = db.export_annotation_logs_csv()
+    response = Response(csv_data, mimetype='text/csv')
+    response.headers['Content-Disposition'] = 'attachment; filename=annotation_logs.csv'
+    return response
 
 
 if __name__ == '__main__':

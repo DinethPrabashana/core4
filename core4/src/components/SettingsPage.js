@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import "../style/SettingsPage.css";
 
-export default function SettingsPage({ onClearData }) {
+export default function SettingsPage() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState(null);
   
-  const downloadTextFile = (filename, content) => {
-    const blob = new Blob([content], { type: "text/plain" });
+  const downloadFile = (filename, content, type = "text/plain") => {
+    const blob = new Blob([content], { type });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -13,69 +15,124 @@ export default function SettingsPage({ onClearData }) {
     URL.revokeObjectURL(url);
   };
 
-  const handleExportTransformers = () => {
-    const transformers = JSON.parse(localStorage.getItem("transformers") || "[]");
-    if (!transformers.length) return alert("No transformer data to export!");
-    const content = transformers.map(t => 
-      `ID: ${t.id}\nNumber: ${t.number}\nPole: ${t.pole}\nRegion: ${t.region}\nType: ${t.type}\nLocation: ${t.location}\nWeather: ${t.weather}\nBaseline Upload Date: ${t.baselineUploadDate || "N/A"}\n\n`
-    ).join("");
-    downloadTextFile("transformers.txt", content);
+  const handleExportAnnotationLogsJSON = async () => {
+    setIsExporting(true);
+    setExportStatus(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/annotation-logs/export/json');
+      if (!response.ok) {
+        throw new Error('Failed to export annotation logs');
+      }
+      const jsonData = await response.text();
+      downloadFile('annotation_logs.json', jsonData, 'application/json');
+      setExportStatus({ type: 'success', message: 'JSON export completed successfully!' });
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportStatus({ type: 'error', message: 'Export failed. Please ensure the backend is running.' });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportInspections = () => {
-    const inspections = JSON.parse(localStorage.getItem("inspections") || "[]");
-    if (!inspections.length) return alert("No inspection data to export!");
-    const transformers = JSON.parse(localStorage.getItem("transformers") || "[]");
-    const content = inspections.map(i => {
-      const transformerNumber = transformers.find(t => t.id === i.transformer)?.number || "Unknown";
-      return `ID: ${i.id}\nTransformer: ${transformerNumber}\nDate: ${i.date}\nInspector: ${i.inspector}\nNotes: ${i.notes}\nStatus: ${i.status || "Pending"}\n\n`;
-    }).join("");
-    downloadTextFile("inspections.txt", content);
-  };
-
-  const handleExportTransformerImagesMeta = () => {
-    const transformers = JSON.parse(localStorage.getItem("transformers") || "[]");
-    if (!transformers.length) return alert("No transformer data found!");
-    const content = transformers.map(t =>
-      `Transformer: ${t.number}\nBaseline Image Present: ${!!t.baselineImage}\nBaseline Upload Date: ${t.baselineUploadDate || "N/A"}\nWeather: ${t.weather}\n\n`
-    ).join("");
-    downloadTextFile("transformer_images_meta.txt", content);
-  };
-
-  const handleExportInspectionImagesMeta = () => {
-    const inspections = JSON.parse(localStorage.getItem("inspections") || "[]");
-    const transformers = JSON.parse(localStorage.getItem("transformers") || "[]");
-    if (!inspections.length) return alert("No inspection data found!");
-    const content = inspections.map(i => {
-      const transformerNumber = transformers.find(t => t.id === i.transformer)?.number || "Unknown";
-      return `Inspection ID: ${i.id}\nTransformer: ${transformerNumber}\nMaintenance Image Present: ${!!i.maintenanceImage}\nUpload Date: ${i.maintenanceUploadDate || "N/A"}\nWeather: ${i.maintenanceWeather || "N/A"}\nStatus: ${i.status || "Pending"}\n\n`;
-    }).join("");
-    downloadTextFile("inspection_images_meta.txt", content);
+  const handleExportAnnotationLogsCSV = async () => {
+    setIsExporting(true);
+    setExportStatus(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/annotation-logs/export/csv');
+      if (!response.ok) {
+        throw new Error('Failed to export annotation logs');
+      }
+      const csvData = await response.text();
+      downloadFile('annotation_logs.csv', csvData, 'text/csv');
+      setExportStatus({ type: 'success', message: 'CSV export completed successfully!' });
+    } catch (error) {
+      console.error('Export failed:', error);
+      setExportStatus({ type: 'error', message: 'Export failed. Please ensure the backend is running.' });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <div className="settings-container">
-      <h2>Settings</h2>
+      <div className="settings-header">
+        <h1 className="settings-title">⚙️ Settings</h1>
+        <p className="settings-subtitle">Manage your annotation data and export options</p>
+      </div>
 
-      <button className="settings-btn blue" onClick={handleExportTransformers}>
-        Export Transformers
-      </button>
+      <div className="settings-content">
+        <div className="settings-card">
+          <div className="card-header">
+            <div className="card-icon">📊</div>
+            <div className="card-title-section">
+              <h3 className="card-title">Annotation Logs Export</h3>
+              <p className="card-description">
+                Export annotation feedback logs for model training and improvement. 
+                Includes AI predictions, user modifications, and complete metadata.
+              </p>
+            </div>
+          </div>
 
-      <button className="settings-btn green" onClick={handleExportInspections}>
-        Export Inspections
-      </button>
+          <div className="card-content">
+            <div className="export-options">
+              <div className="export-option">
+                <div className="export-option-info">
+                  <div className="export-icon json-icon">{ }</div>
+                  <div>
+                    <h4>JSON Format</h4>
+                    <p>Structured data format ideal for machine learning pipelines and programmatic access</p>
+                  </div>
+                </div>
+                <button 
+                  className="export-btn json-btn" 
+                  onClick={handleExportAnnotationLogsJSON}
+                  disabled={isExporting}
+                >
+                  <span className="btn-icon">⬇</span>
+                  {isExporting ? 'Exporting...' : 'Export JSON'}
+                </button>
+              </div>
 
-      <button className="settings-btn purple" onClick={handleExportTransformerImagesMeta}>
-        Export Transformer Images Metadata
-      </button>
+              <div className="export-option">
+                <div className="export-option-info">
+                  <div className="export-icon csv-icon">📈</div>
+                  <div>
+                    <h4>CSV Format</h4>
+                    <p>Spreadsheet-compatible format perfect for data analysis in Excel or similar tools</p>
+                  </div>
+                </div>
+                <button 
+                  className="export-btn csv-btn" 
+                  onClick={handleExportAnnotationLogsCSV}
+                  disabled={isExporting}
+                >
+                  <span className="btn-icon">⬇</span>
+                  {isExporting ? 'Exporting...' : 'Export CSV'}
+                </button>
+              </div>
+            </div>
 
-      <button className="settings-btn orange" onClick={handleExportInspectionImagesMeta}>
-        Export Inspection Images Metadata
-      </button>
+            {exportStatus && (
+              <div className={`status-message ${exportStatus.type}`}>
+                <span className="status-icon">
+                  {exportStatus.type === 'success' ? '✓' : '✗'}
+                </span>
+                {exportStatus.message}
+              </div>
+            )}
+          </div>
+        </div>
 
-      <button className="settings-btn red" onClick={onClearData}>
-        Clear Local Storage
-      </button>
+        <div className="settings-info-card">
+          <h4>📝 Export Information</h4>
+          <ul>
+            <li><strong>Included Data:</strong> All annotation actions, timestamps, user IDs, and metadata</li>
+            <li><strong>AI Predictions:</strong> Original AI detection results for comparison</li>
+            <li><strong>User Modifications:</strong> Final human-verified annotations</li>
+            <li><strong>Use Case:</strong> Model retraining, performance analysis, and quality assurance</li>
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }

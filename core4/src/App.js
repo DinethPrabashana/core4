@@ -207,16 +207,13 @@ function App() {
   // --- Full-page inspection handlers ---
   const handleOpenTransformerInspectionsPage = (transformer) => { setSelectedTransformerForPage(transformer); setShowTransformerInspectionsPage(true); };
   const handleBackToMain = () => { setSelectedTransformerForPage(null); setShowTransformerInspectionsPage(false); };
-
-  // --- Clear Local Storage handler ---
-  const handleClearLocalStorage = () => { localStorage.clear(); window.location.reload(); };
   
   return (
     <div className="app">
       <Sidebar setActivePage={setActivePage} />
       <div className="content">
         {activePage === "page2" ? (
-          <SettingsPage onClearData={handleClearLocalStorage} transformers={transformers} inspections={inspections} />
+          <SettingsPage />
         ) : showTransformerInspectionsPage && selectedTransformerForPage ? (
           <TransformerInspectionsPage
             transformer={selectedTransformerForPage}

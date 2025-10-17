@@ -105,6 +105,73 @@ export default function InspectionViewModal({
   const [zoomLevel, setZoomLevel] = useState(1); // Re-add state for zoom slider
   const [imageLoaded, setImageLoaded] = useState(0); // State to trigger re-render on image load
   const [hoveredAnomalyId, setHoveredAnomalyId] = useState(null); // For highlighting
+  const [selectedAnomalyId, setSelectedAnomalyId] = useState(null); // For editing/resizing
+  const [isResizing, setIsResizing] = useState(false); // Track if user is resizing
+  const [resizeHandle, setResizeHandle] = useState(null); // Which handle is being dragged
+  const [isDragging, setIsDragging] = useState(false); // Track if user is dragging to reposition
+
+  // Auto-save annotations when they change
+  useEffect(() => {
+    const autoSave = async () => {
+      if (anomalies.length > 0 && inspection.id) {
+        try {
+          await fetch(`http://localhost:8000/api/annotations/${inspection.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              annotations: anomalies,
+              user_id: uploader,
+              transformer_id: inspection.transformer
+            })
+          });
+        } catch (error) {
+          console.error('Auto-save failed:', error);
+        }
+      }
+    };
+    
+    // Debounce auto-save
+    const timeoutId = setTimeout(autoSave, 1000);
+    return () => clearTimeout(timeoutId);
+  }, [anomalies, inspection.id, inspection.transformer]);
+
+  // Load saved annotations when component mounts
+  useEffect(() => {
+    const loadAnnotations = async () => {
+      if (inspection.id) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/annotations/${inspection.id}`);
+          if (response.ok) {
+            const savedAnnotations = await response.json();
+            if (savedAnnotations.length > 0) {
+              // Convert from database format to UI format
+              const convertedAnnotations = savedAnnotations.map(a => ({
+                id: a.annotation_id,
+                x: a.x,
+                y: a.y,
+                w: a.w,
+                h: a.h,
+                confidence: a.confidence,
+                severity: a.severity,
+                classification: a.classification,
+                comment: a.comment || '',
+                source: a.source,
+                deleted: a.deleted === 1,
+                created_at: a.created_at,
+                updated_at: a.updated_at,
+                user_id: a.user_id
+              }));
+              setAnomalies(convertedAnnotations);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load annotations:', error);
+        }
+      }
+    };
+    
+    loadAnnotations();
+  }, [inspection.id]);
 
   // Filter out deleted anomalies for display
   const visibleAnomalies = anomalies.filter(a => !a.deleted);
@@ -147,9 +214,97 @@ export default function InspectionViewModal({
     // For both AI (with reason) and Manual anomalies, mark as deleted.
     setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true } : a));
   };
+  
   const handleRestoreAnomaly = (id) => {
     setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: false } : a));
   };
+
+  // Handle resize/reposition of annotations
+  const handleAnnotationMouseDown = (e, anomalyId, handle = null) => {
+    e.stopPropagation();
+    setSelectedAnomalyId(anomalyId);
+    
+    if (handle) {
+      // Resizing
+      setIsResizing(true);
+      setResizeHandle(handle);
+    } else {
+      // Dragging/repositioning
+      setIsDragging(true);
+    }
+  };
+
+  const handleAnnotationDrag = (e) => {
+    if (!isDragging && !isResizing) return;
+    if (!selectedAnomalyId) return;
+
+    const { x: mouseX, y: mouseY } = getMousePos(e);
+    
+    setAnomalies(prev => prev.map(a => {
+      if (a.id !== selectedAnomalyId) return a;
+      
+      if (isDragging) {
+        // Reposition - move the entire box
+        const newX = mouseX - a.w / 2;
+        const newY = mouseY - a.h / 2;
+        return { ...a, x: Math.max(0, newX), y: Math.max(0, newY) };
+      } else if (isResizing && resizeHandle) {
+        // Resize based on which handle is being dragged
+        const newAnnot = { ...a };
+        
+        switch(resizeHandle) {
+          case 'nw': // top-left
+            newAnnot.w = a.x + a.w - mouseX;
+            newAnnot.h = a.y + a.h - mouseY;
+            newAnnot.x = mouseX;
+            newAnnot.y = mouseY;
+            break;
+          case 'ne': // top-right
+            newAnnot.w = mouseX - a.x;
+            newAnnot.h = a.y + a.h - mouseY;
+            newAnnot.y = mouseY;
+            break;
+          case 'sw': // bottom-left
+            newAnnot.w = a.x + a.w - mouseX;
+            newAnnot.h = mouseY - a.y;
+            newAnnot.x = mouseX;
+            break;
+          case 'se': // bottom-right
+            newAnnot.w = mouseX - a.x;
+            newAnnot.h = mouseY - a.y;
+            break;
+        }
+        
+        // Ensure minimum size
+        if (newAnnot.w < 10) newAnnot.w = 10;
+        if (newAnnot.h < 10) newAnnot.h = 10;
+        
+        return newAnnot;
+      }
+      
+      return a;
+    }));
+  };
+
+  const handleAnnotationMouseUp = () => {
+    setIsDragging(false);
+    setIsResizing(false);
+    setResizeHandle(null);
+  };
+
+  // Add mouse move and mouse up listeners for drag/resize
+  useEffect(() => {
+    if (isDragging || isResizing) {
+      window.addEventListener('mousemove', handleAnnotationDrag);
+      window.addEventListener('mouseup', handleAnnotationMouseUp);
+      
+      return () => {
+        window.removeEventListener('mousemove', handleAnnotationDrag);
+        window.removeEventListener('mouseup', handleAnnotationMouseUp);
+      };
+    }
+  }, [isDragging, isResizing, selectedAnomalyId, resizeHandle]);
+  
   // --- Save handler (will also save annotations if present) ---
   const handleManualSeverityChange = (id, newSeverity) => {
     setAnomalies(prev => prev.map(a =>
@@ -186,11 +341,22 @@ export default function InspectionViewModal({
       });
     }
 
-    // If there are annotations/anomalies, send to backend
-    if (anomalies && anomalies.length > 0) {
-      // The annotations are now saved as part of the main inspection update,
-      // so the separate call to /save_annotations is no longer needed.
-      // The `updateInspection` function below handles this.
+    // Save annotations to backend
+    if (anomalies && anomalies.length > 0 && inspection.id) {
+      try {
+        await fetch(`http://localhost:8000/api/annotations/${inspection.id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            annotations: anomalies,
+            user_id: uploader,
+            transformer_id: inspection.transformer
+          })
+        });
+      } catch (error) {
+        console.error('Failed to save annotations:', error);
+        alert('Failed to save annotations. Please try again.');
+      }
     }
 
     onClose();
@@ -422,7 +588,8 @@ export default function InspectionViewModal({
       const height = a.h * imgScale;
 
       const borderColor = a.severity === 'Faulty' ? 'rgba(220, 53, 69, 0.9)' : (a.severity === 'Potentially Faulty' ? 'rgba(253, 126, 20, 0.9)' : 'rgba(255, 200, 0, 0.95)');
-      const background = 'transparent';
+      const isSelected = selectedAnomalyId === a.id;
+      
       return (
         // The parent div for an annotation box and its label
         <div
@@ -436,17 +603,112 @@ export default function InspectionViewModal({
             height: `${height}px`,
             boxSizing: 'border-box',
             pointerEvents: 'auto', // Enable hover events
-            cursor: 'pointer'
+            cursor: isDragging ? 'grabbing' : 'grab'
           }}
           onMouseEnter={() => setHoveredAnomalyId(a.id)}
           onMouseLeave={() => setHoveredAnomalyId(null)}
+          onMouseDown={(e) => handleAnnotationMouseDown(e, a.id)}
         >
           {/* The visible box */}
-          <div style={{ width: '100%', height: '100%', border: `2px solid ${borderColor}` }} />
+          <div style={{ 
+            width: '100%', 
+            height: '100%', 
+            border: `${isSelected ? '3px' : '2px'} solid ${borderColor}`,
+            boxShadow: isSelected ? '0 0 10px rgba(0,0,0,0.5)' : 'none'
+          }} />
+          
           {/* The number label */}
           <div className="annotation-tag" style={{ backgroundColor: borderColor }}>
             {index + 1}
           </div>
+          
+          {/* Resize handles - only show when selected */}
+          {isSelected && (
+            <>
+              <div 
+                className="resize-handle resize-nw" 
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  left: '-4px',
+                  width: '8px',
+                  height: '8px',
+                  background: 'white',
+                  border: '2px solid ' + borderColor,
+                  cursor: 'nw-resize',
+                  borderRadius: '50%'
+                }}
+                onMouseDown={(e) => handleAnnotationMouseDown(e, a.id, 'nw')}
+              />
+              <div 
+                className="resize-handle resize-ne"
+                style={{
+                  position: 'absolute',
+                  top: '-4px',
+                  right: '-4px',
+                  width: '8px',
+                  height: '8px',
+                  background: 'white',
+                  border: '2px solid ' + borderColor,
+                  cursor: 'ne-resize',
+                  borderRadius: '50%'
+                }}
+                onMouseDown={(e) => handleAnnotationMouseDown(e, a.id, 'ne')}
+              />
+              <div 
+                className="resize-handle resize-sw"
+                style={{
+                  position: 'absolute',
+                  bottom: '-4px',
+                  left: '-4px',
+                  width: '8px',
+                  height: '8px',
+                  background: 'white',
+                  border: '2px solid ' + borderColor,
+                  cursor: 'sw-resize',
+                  borderRadius: '50%'
+                }}
+                onMouseDown={(e) => handleAnnotationMouseDown(e, a.id, 'sw')}
+              />
+              <div 
+                className="resize-handle resize-se"
+                style={{
+                  position: 'absolute',
+                  bottom: '-4px',
+                  right: '-4px',
+                  width: '8px',
+                  height: '8px',
+                  background: 'white',
+                  border: '2px solid ' + borderColor,
+                  cursor: 'se-resize',
+                  borderRadius: '50%'
+                }}
+                onMouseDown={(e) => handleAnnotationMouseDown(e, a.id, 'se')}
+              />
+            </>
+          )}
+          
+          {/* Display metadata when hovered */}
+          {hoveredAnomalyId === a.id && a.user_id && (
+            <div style={{
+              position: 'absolute',
+              bottom: '-60px',
+              left: '0',
+              background: 'rgba(0,0,0,0.8)',
+              color: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              zIndex: 1000
+            }}>
+              <div><strong>User:</strong> {a.user_id}</div>
+              {a.updated_at && <div><strong>Modified:</strong> {new Date(a.updated_at).toLocaleString()}</div>}
+              {a.source === 'ai' && <div><strong>Source:</strong> AI Detection</div>}
+              {a.source === 'user' && <div><strong>Source:</strong> Manual</div>}
+            </div>
+          )}
         </div>
       );
     });
@@ -639,7 +901,9 @@ export default function InspectionViewModal({
                   <th>Source</th>
                   <th>Severity</th>
                   <th>Classification</th>
+                  <th>Details</th>
                   <th>Comment</th>
+                  <th>User/Time</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -696,6 +960,13 @@ export default function InspectionViewModal({
                         onChange={(e) => handleCommentChange(a.id, e.target.value)}
                         className="log-comment-textarea"
                       />
+                    </td>
+                    <td>
+                      <div style={{ fontSize: '11px', lineHeight: '1.3' }}>
+                        {a.user_id && <div><strong>User:</strong> {a.user_id}</div>}
+                        {a.created_at && <div><strong>Created:</strong> {new Date(a.created_at).toLocaleString()}</div>}
+                        {a.updated_at && <div><strong>Updated:</strong> {new Date(a.updated_at).toLocaleString()}</div>}
+                      </div>
                     </td>
                     <td>
                       <button className="danger-btn" onClick={() => handleDeleteAnomaly(a.id)}>
