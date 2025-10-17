@@ -117,4 +117,63 @@ The frontend provides the user interface for interacting with the application.
 ## Known Limitations
 
 - **The Flask API used in this project relies on Flask’s built-in development server, which is not suitable for production deployment. It is intended for testing and development only and may have performance and security limitations under real-world usage.**
-- ****
+- **The AI models for anomaly detection and classification are only as good as the data they were trained on. Inaccuracies in the training data may lead to false positives or negatives in anomaly detection.**
+- **Real-time performance may vary based on the hardware specifications of the host machine, especially during AI inference and image processing tasks.**
+- **The system currently supports only JPEG image format for thermal images. Other formats like PNG or BMP are not supported at this time.**
+- **Network latency may affect the performance of the application, especially the communication between the frontend and backend servers.**
+
+---
+
+## Annotation Log Export Format
+
+The system provides export functionality for annotation logs in both JSON and CSV formats. These exports are now concise and structured for clarity:
+
+### JSON Export
+- **Grouped by Inspection**: Each inspection contains its transformer, images, and a list of annotation actions.
+- **Structure Example:**
+
+```json
+[
+  {
+    "inspection_id": 1,
+    "transformer_id": 101,
+    "images": [
+      {
+        "image_id": "T1_faulty_001.jpg",
+        "actions": [
+          {
+            "action_type": "added",
+            "timestamp": "2025-10-17T12:34:56Z",
+            "user_id": "inspectorA",
+            "notes": "Confirmed anomaly",
+            "annotation": { ... },
+            "ai_prediction": { ... },
+            "user_annotation": { ... }
+          },
+          // ... more actions
+        ]
+      }
+      // ... more images
+    ]
+  }
+  // ... more inspections
+]
+```
+
+### CSV Export
+- **Flat Table**: Each row represents a single annotation action, with clear columns for inspection, transformer, image, action, annotation details, user, and timestamp.
+- **Columns:**
+  - inspection_id
+  - transformer_id
+  - image_id
+  - action_type
+  - timestamp
+  - user_id
+  - notes
+  - annotation
+  - ai_prediction
+  - user_annotation
+
+This format makes it easy to trace which annotation belongs to which inspection, transformer, and image, and who performed each action.
+
+---
