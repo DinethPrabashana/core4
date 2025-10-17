@@ -113,9 +113,11 @@ The frontend provides the user interface for interacting with the application.
 
     Your web browser should automatically open to `http://localhost:3000`, where you can now use the application. The frontend will communicate with the backend server you started in the other terminal.
 
-5. **Delete the default database entries**
+5. **Delete the default database entries:**
 first go  to the backend directory, and run. 
-```python -c "import sqlite3; conn=sqlite3.connect('backend.db'); conn.executescript('DELETE FROM annotation_logs; DELETE FROM annotations; DELETE FROM inspections; DELETE FROM transformers; VACUUM;'); conn.commit(); conn.close(); print('Cleared tables and VACUUM complete')"```
+```bash 
+python -c "import sqlite3; conn=sqlite3.connect('backend.db'); conn.executescript('DELETE FROM annotation_logs; DELETE FROM annotations; DELETE FROM inspections; DELETE FROM transformers; VACUUM;'); conn.commit(); conn.close(); print('Cleared tables and VACUUM complete')"
+```
 
 ***Note all the data will be erased from the database***
 
