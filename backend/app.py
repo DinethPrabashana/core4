@@ -128,7 +128,14 @@ def analyze_images_endpoint():
 def handle_transformers():
     if request.method == 'GET':
         transformers = db.get_all_transformers()
-        return jsonify(transformers)
+        # Attach latest inspection summary for each transformer to help frontend show persisted info
+        enriched = []
+        for t in transformers:
+            latest = db.get_latest_inspection_for_transformer(t['id'])
+            t_copy = dict(t)
+            t_copy['latestInspection'] = latest
+            enriched.append(t_copy)
+        return jsonify(enriched)
     if request.method == 'POST':
         transformer_data = request.json
         saved_transformer = db.add_transformer(transformer_data)

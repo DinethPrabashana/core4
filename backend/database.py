@@ -58,6 +58,32 @@ def get_all_transformers():
     conn.close()
     return [dict_from_row(row) for row in transformers]
 
+
+def get_latest_inspection_for_transformer(transformer_id):
+    """Return the latest inspection for a transformer (prefer inspectedDate, fallback to date)."""
+    conn = get_db_connection()
+    row = conn.execute(
+        '''SELECT * FROM inspections WHERE transformer_id = ? ORDER BY 
+           COALESCE(inspectedDate, date) DESC LIMIT 1''',
+        (transformer_id,)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    insp = dict_from_row(row)
+    insp['transformer'] = insp.pop('transformer_id')
+    if insp.get('anomalies'):
+        try:
+            insp['anomalies'] = json.loads(insp['anomalies'])
+        except Exception:
+            insp['anomalies'] = insp['anomalies']
+    if insp.get('progressStatus'):
+        try:
+            insp['progressStatus'] = json.loads(insp['progressStatus'])
+        except Exception:
+            insp['progressStatus'] = insp['progressStatus']
+    return insp
+
 def delete_transformer(transformer_id):
     """Deletes a transformer and its associated inspections."""
     conn = get_db_connection()

@@ -29,21 +29,28 @@ export default function InspectionList({
   const transformerRows = transformers.map((t) => {
     const tInspections = inspections.filter(i => i.transformer === t.id);
 
-// Next maintenance date = EARLIEST pending inspection date
-const completed = tInspections.filter(i => i.inspectedDate);  // only completed
-const latestInspectedDate = completed.length
-  ? completed.reduce((latest, curr) =>
-      !latest || new Date(curr.inspectedDate) > new Date(latest.inspectedDate) ? curr : latest
-    ).inspectedDate
-  : "-";
+// Prefer latestInspection attached to transformer (from backend) for persisted data
+let latestInspectedDate = "-";
+let latestMaintenanceDate = "-";
+if (t.latestInspection) {
+  latestInspectedDate = t.latestInspection.inspectedDate || "-";
+  latestMaintenanceDate = t.latestInspection.date || "-";
+} else {
+  // Fallback to computing from local inspections list
+  const completed = tInspections.filter(i => i.inspectedDate);
+  latestInspectedDate = completed.length
+    ? completed.reduce((latest, curr) =>
+        !latest || new Date(curr.inspectedDate) > new Date(latest.inspectedDate) ? curr : latest
+      ).inspectedDate
+    : "-";
 
-// Latest maintenance date = next pending inspection
-const pending = tInspections.filter(i => !i.inspectedDate);
-const latestMaintenanceDate = pending.length
-  ? pending.reduce((latest, curr) =>
-      !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
-    ).date
-  : "-";
+  const pending = tInspections.filter(i => !i.inspectedDate);
+  latestMaintenanceDate = pending.length
+    ? pending.reduce((latest, curr) =>
+        !latest || new Date(curr.date) > new Date(latest.date) ? curr : latest
+      ).date
+    : "-";
+}
 
 
     return {

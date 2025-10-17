@@ -46,27 +46,37 @@ export default function TransformerInspectionsPage({
       return;
     }
 
-    const newInspection = {
-      ...newInspectionForm,
-      id: Date.now(),
-      maintenanceImage: null,
-      maintenanceUploadDate: null,
-      maintenanceWeather: "Sunny",
-      progressStatus: {
-        thermalUpload: "Pending",
-        aiAnalysis: "Pending",
-        review: "Pending"
+    // Persist the new inspection to the backend so it survives reloads
+    (async () => {
+      const API_URL = 'http://localhost:8000/api';
+      const inspectionPayload = {
+        ...newInspectionForm,
+        transformer: transformer.id,
+        progressStatus: {
+          thermalUpload: "Pending",
+          aiAnalysis: "Pending",
+          review: "Pending"
+        }
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/inspections`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(inspectionPayload)
+        });
+        if (!res.ok) throw new Error('Failed to save inspection');
+        const savedInspection = await res.json();
+
+        setInspections(prev => [...prev, savedInspection]);
+        setFilteredInspections(prev => [...prev, savedInspection]);
+        setShowAddInspectionModal(false);
+        setNewInspectionForm({ transformer: transformer.id, date: "", inspector: "", notes: "" });
+      } catch (err) {
+        console.error('Error saving inspection:', err);
+        alert('Failed to save inspection to server. Check backend and try again.');
       }
-    };
-    setInspections(prev => [...prev, newInspection]);
-    setFilteredInspections(prev => [...prev, newInspection]);
-    setShowAddInspectionModal(false);
-    setNewInspectionForm({
-      transformer: transformer.id,
-      date: "",
-      inspector: "",
-      notes: ""
-    });
+    })();
   };
 
   const generateInspectionNumber = (transformerNumber, index) => {
