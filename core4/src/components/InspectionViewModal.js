@@ -196,7 +196,8 @@ export default function InspectionViewModal({
 
   // Edit comment for anomaly
   const handleCommentChange = (id, text) => {
-    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, comment: text } : a));
+    const now = new Date().toISOString();
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, comment: text, updated_at: now, user_id: a.user_id || uploader } : a));
   };
 
   // Delete (mark deleted) or restore
@@ -211,12 +212,14 @@ export default function InspectionViewModal({
         return;
       }
     }
-    // For both AI (with reason) and Manual anomalies, mark as deleted.
-    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true } : a));
+    // For both AI (with reason) and Manual anomalies, mark as deleted and add timestamp/user info
+    const now = new Date().toISOString();
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: true, updated_at: now, user_id: a.user_id || uploader } : a));
   };
   
   const handleRestoreAnomaly = (id) => {
-    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: false } : a));
+    const now = new Date().toISOString();
+    setAnomalies(prev => prev.map(a => a.id === id ? { ...a, deleted: false, updated_at: now, user_id: a.user_id || uploader } : a));
   };
 
   // Handle resize/reposition of annotations
@@ -307,16 +310,18 @@ export default function InspectionViewModal({
   
   // --- Save handler (will also save annotations if present) ---
   const handleManualSeverityChange = (id, newSeverity) => {
+    const now = new Date().toISOString();
     setAnomalies(prev => prev.map(a =>
         (a.id === id && a.source === 'user')
-            ? { ...a, severity: newSeverity }
+            ? { ...a, severity: newSeverity, updated_at: now, user_id: a.user_id || uploader }
             : a
     ));
   };
   const handleManualClassificationChange = (id, newClassification) => {
+    const now = new Date().toISOString();
     setAnomalies(prev => prev.map(a =>
         (a.id === id && a.source === 'user')
-            ? { ...a, classification: newClassification }
+            ? { ...a, classification: newClassification, updated_at: now, user_id: a.user_id || uploader }
             : a
     ));
   };
@@ -460,7 +465,10 @@ export default function InspectionViewModal({
         severity: a.severity ?? null,
         comment: a.comment ?? '',
         source: 'ai',
-        deleted: false
+        deleted: false,
+        user_id: a.user_id || 'AI',
+        created_at: a.created_at || new Date().toISOString(),
+        updated_at: a.updated_at || new Date().toISOString()
       }));
       setAnomalies(mapped);
       setProgressStatus(prev => ({ ...prev, aiAnalysis: "Completed", review: "In Progress", thermalUpload: "Completed" }));
@@ -530,6 +538,7 @@ export default function InspectionViewModal({
     if (width > 5 && height > 5) {
       const x = Math.min(newBoxStart.x, finalX);
       const y = Math.min(newBoxStart.y, finalY);
+      const nowIso = new Date().toISOString();
       const newAnom = {
         id: `user_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
         x, y, w: width, h: height,
@@ -538,7 +547,10 @@ export default function InspectionViewModal({
         severity: null,
         comment: '',
         source: 'user',
-        deleted: false
+        deleted: false,
+        user_id: uploader,
+        created_at: nowIso,
+        updated_at: nowIso
       };
       setAnomalies(prev => [...prev, newAnom]);
     }
@@ -796,7 +808,7 @@ export default function InspectionViewModal({
                 {isRunningAI ? "Running AI..." : "Run AI Analysis"}
               </button>
               <button
-                className={isAddingBox ? "cancel-draw-btn" : ""}
+                className={isAddingBox ? "cancel-draw-btn" : "add-manual-box-btn1"}
                 style={{ marginLeft: 8 }}
                 onClick={() => {
                   if (isAddingBox) {
@@ -810,7 +822,7 @@ export default function InspectionViewModal({
               >
                 {isAddingBox ? "Cancel Drawing" : "Add Manual Box"}
               </button>
-              <button style={{ marginLeft: 8 }} onClick={handleClearAnnotations}>Clear Annotations</button>
+              <button className="clear-annotation-btn1" onClick={handleClearAnnotations}>Clear Annotations</button>
             </div>
           </div>
         </div>

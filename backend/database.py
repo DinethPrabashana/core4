@@ -164,7 +164,7 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
     """Save or update annotations for an inspection."""
     from datetime import datetime
     conn = get_db_connection()
-    timestamp = datetime.now().isoformat()
+    server_timestamp = datetime.now().isoformat()
     
     for annot in annotations:
         # Check if annotation exists
@@ -175,6 +175,8 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
         
         if existing:
             # Update existing annotation
+            # Use provided updated_at if available, otherwise server time
+            updated_at = annot.get('updated_at') or server_timestamp
             conn.execute(
                 '''UPDATE annotations SET 
                    x = ?, y = ?, w = ?, h = ?, confidence = ?, severity = ?, 
@@ -183,10 +185,13 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
                 (annot['x'], annot['y'], annot['w'], annot['h'], 
                  annot.get('confidence'), annot.get('severity'), 
                  annot.get('classification'), annot.get('comment', ''),
-                 1 if annot.get('deleted') else 0, timestamp, annot['id'])
+                 1 if annot.get('deleted') else 0, updated_at, annot['id'])
             )
         else:
             # Insert new annotation
+            # Use provided created_at/updated_at if available, otherwise server time
+            created_at = annot.get('created_at') or server_timestamp
+            updated_at = annot.get('updated_at') or server_timestamp
             conn.execute(
                 '''INSERT INTO annotations 
                    (inspection_id, annotation_id, x, y, w, h, confidence, severity, 
@@ -196,7 +201,7 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
                  annot.get('confidence'), annot.get('severity'), 
                  annot.get('classification'), annot.get('comment', ''),
                  annot.get('source', 'user'), 1 if annot.get('deleted') else 0,
-                 user_id, timestamp, timestamp)
+                 user_id, created_at, updated_at)
             )
     
     conn.commit()
