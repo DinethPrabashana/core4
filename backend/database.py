@@ -269,11 +269,53 @@ def get_annotation_logs(inspection_id=None):
     return result
 
 def export_annotation_logs_json():
-    """Export all annotation logs as JSON."""
+    """Export all annotation logs as JSON with first occurrence per action per annotation."""
+    from datetime import datetime
     logs = get_annotation_logs()
-    # Group logs by inspection and transformer
-    structured = {}
+    if not logs:
+        return json.dumps([])
+
+    # Deduplicate: keep only the FIRST occurrence (earliest timestamp)
+    # for each (inspection_id, annotation_id, action_type)
+    earliest_by_key = {}
     for log in logs:
+        ann = log.get('annotation_data') or {}
+        ann_id = None
+        if isinstance(ann, dict):
+            ann_id = ann.get('id')
+        if ann_id is None:
+            try:
+                ann_id = json.dumps(ann, sort_keys=True)
+            except Exception:
+                ann_id = str(ann)
+
+        key = (log.get('inspection_id'), ann_id, log.get('action_type'))
+        ts_str = log.get('timestamp') or ""
+        try:
+            ts_val = datetime.fromisoformat(ts_str)
+        except Exception:
+            ts_val = ts_str
+
+        if key not in earliest_by_key:
+            earliest_by_key[key] = (ts_val, log)
+        else:
+            existing_ts, _ = earliest_by_key[key]
+            if (isinstance(ts_val, datetime) and isinstance(existing_ts, datetime) and ts_val < existing_ts) or \
+               (not isinstance(ts_val, datetime) and ts_val < existing_ts):
+                earliest_by_key[key] = (ts_val, log)
+
+    # Sort deduped logs by timestamp ascending for readability
+    deduped_logs = [item[1] for item in earliest_by_key.values()]
+    def sort_key(l):
+        try:
+            return datetime.fromisoformat(l.get('timestamp') or "")
+        except Exception:
+            return l.get('timestamp') or ""
+    deduped_logs.sort(key=sort_key)
+
+    # Group logs by inspection and image for output
+    structured = {}
+    for log in deduped_logs:
         insp_id = log.get('inspection_id')
         trans_id = log.get('transformer_id')
         image_id = log.get('image_id')
@@ -288,7 +330,6 @@ def export_annotation_logs_json():
                 'image_id': image_id,
                 'actions': []
             }
-        # Only include essential fields
         action = {
             'action_type': log.get('action_type'),
             'timestamp': log.get('timestamp'),
@@ -299,6 +340,7 @@ def export_annotation_logs_json():
             'user_annotation': log.get('user_annotation')
         }
         structured[insp_id]['images'][image_id]['actions'].append(action)
+
     # Convert dict to list for output
     output = []
     for insp in structured.values():
@@ -310,10 +352,51 @@ def export_annotation_logs_csv():
     """Export annotation logs as CSV format."""
     import csv
     from io import StringIO
-    
+    from datetime import datetime
+
     logs = get_annotation_logs()
     if not logs:
         return ""
+
+    # Deduplicate: keep only the FIRST occurrence (earliest timestamp)
+    # for each (inspection_id, annotation_id, action_type)
+    earliest_by_key = {}
+    for log in logs:
+        ann = log.get('annotation_data') or {}
+        ann_id = ann.get('id')
+        # If annotation id is missing, fall back to a stable representation of the annotation
+        if ann_id is None:
+            try:
+                ann_id = json.dumps(ann, sort_keys=True)
+            except Exception:
+                ann_id = str(ann)
+
+        key = (log.get('inspection_id'), ann_id, log.get('action_type'))
+        ts_str = log.get('timestamp') or ""
+        # Parse to datetime if possible for robust comparison
+        try:
+            ts_val = datetime.fromisoformat(ts_str)
+        except Exception:
+            # Fallback: compare as string
+            ts_val = ts_str
+
+        if key not in earliest_by_key:
+            earliest_by_key[key] = (ts_val, log)
+        else:
+            existing_ts, _ = earliest_by_key[key]
+            if (isinstance(ts_val, datetime) and isinstance(existing_ts, datetime) and ts_val < existing_ts) or \
+               (not isinstance(ts_val, datetime) and ts_val < existing_ts):
+                earliest_by_key[key] = (ts_val, log)
+
+    # Prepare CSV output of deduped logs sorted by timestamp ascending
+    deduped_logs = [item[1] for item in earliest_by_key.values()]
+    def sort_key(l):
+        try:
+            return datetime.fromisoformat(l.get('timestamp') or "")
+        except Exception:
+            return l.get('timestamp') or ""
+    deduped_logs.sort(key=sort_key)
+
     output = StringIO()
     fieldnames = [
         'inspection_id', 'transformer_id', 'image_id', 'action_type',
@@ -321,7 +404,7 @@ def export_annotation_logs_csv():
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames)
     writer.writeheader()
-    for log in logs:
+    for log in deduped_logs:
         writer.writerow({
             'inspection_id': log.get('inspection_id'),
             'transformer_id': log.get('transformer_id'),

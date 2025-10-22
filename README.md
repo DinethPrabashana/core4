@@ -138,6 +138,7 @@ The system provides export functionality for annotation logs in both JSON and CS
 
 ### JSON Export
 - **Grouped by Inspection**: Each inspection contains its transformer, images, and a list of annotation actions.
+- **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included.
 - **Structure Example:**
 
 ```json
@@ -170,6 +171,7 @@ The system provides export functionality for annotation logs in both JSON and CS
 
 ### CSV Export
 - **Flat Table**: Each row represents a single annotation action, with clear columns for inspection, transformer, image, action, annotation details, user, and timestamp.
+- **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included to avoid repeated entries from multiple saves.
 - **Columns:**
   - inspection_id
   - transformer_id
