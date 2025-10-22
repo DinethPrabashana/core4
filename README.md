@@ -139,6 +139,10 @@ The system provides export functionality for annotation logs in both JSON and CS
 ### JSON Export
 - **Grouped by Inspection**: Each inspection contains its transformer, images, and a list of annotation actions.
 - **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included.
+- **Human-readable IDs**:
+  - `inspection_id` shows the Inspection Number as seen in the transformer’s Inspections tab, e.g. `T1-INSP1`.
+  - `transformer_id` shows the Transformer Number from the transformers table.
+  - `image_id` mirrors the Inspection Number (same as `inspection_id`).
 - **Structure Example:**
 
 ```json
@@ -172,6 +176,30 @@ The system provides export functionality for annotation logs in both JSON and CS
 ### CSV Export
 - **Flat Table**: Each row represents a single annotation action, with clear columns for inspection, transformer, image, action, annotation details, user, and timestamp.
 - **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included to avoid repeated entries from multiple saves.
+- **Human-readable IDs**:
+  - `inspection_id` shows the Inspection Number as seen in the transformer’s Inspections tab, e.g. `T1-INSP1`.
+  - `transformer_id` shows the Transformer Number from the transformers table.
+  - `image_id` mirrors the Inspection Number (same as `inspection_id`).
+## API: Fetch Annotation Logs
+
+You can fetch logs via the API. Add `firstOnly=true` to return only the first occurrence of each action per annotation:
+
+Example:
+
+```
+GET http://localhost:8000/api/annotation-logs?firstOnly=true
+```
+
+Optional filter by inspection:
+
+```
+GET http://localhost:8000/api/annotation-logs?inspection_id=123&firstOnly=true
+```
+
+Notes:
+- With `firstOnly=true`, the API keeps the earliest timestamp per (inspection_id, annotation_id, action_type).
+- Results are sorted by timestamp descending (latest first) for consistency with the default endpoint ordering.
+
 - **Columns:**
   - inspection_id
   - transformer_id

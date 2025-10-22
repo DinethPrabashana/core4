@@ -245,7 +245,14 @@ def get_annotation_logs():
     """Get all annotation logs or filter by inspection_id."""
     try:
         inspection_id = request.args.get('inspection_id', type=int)
+        first_only_raw = request.args.get('firstOnly', default='false')
+        first_only = str(first_only_raw).lower() in ['1', 'true', 'yes', 'y']
+
         logs = db.get_annotation_logs(inspection_id)
+        if first_only:
+            # Keep the earliest occurrence for each (inspection_id, annotation_id, action_type)
+            # Merge the first non-empty notes/comment to ensure context is present
+            logs = db.first_occurrence_with_merged_notes(logs, sort_order='desc')
         return jsonify(logs)
     except Exception as e:
         print(f"Error in get_annotation_logs: {str(e)}")
