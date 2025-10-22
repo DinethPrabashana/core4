@@ -196,22 +196,42 @@ Optional filter by inspection:
 GET http://localhost:8000/api/annotation-logs?inspection_id=123&firstOnly=true
 ```
 
-Notes:
 - With `firstOnly=true`, the API keeps the earliest timestamp per (inspection_id, annotation_id, action_type).
 - Results are sorted by timestamp descending (latest first) for consistency with the default endpoint ordering.
-
-- **Columns:**
-  - inspection_id
-  - transformer_id
-  - image_id
-  - action_type
   - timestamp
   - user_id
   - notes
   - annotation
-  - ai_prediction
-  - user_annotation
 
-This format makes it easy to trace which annotation belongs to which inspection, transformer, and image, and who performed each action.
+---
+
+## Annotation System Overview
+
+The annotation system allows users to interactively add, edit, and delete bounding boxes (markers) on thermal images to identify anomalies. Each annotation records:
+
+- **created_at**: Timestamp when the bounding box was first added (set by the frontend, preserved by the backend).
+- **updated_at**: Timestamp of the last edit or resize (set by the frontend, preserved by the backend).
+- **user_id**: The user who performed the action.
+- **notes**: Optional comments or reasons for the annotation.
+- **classification**: Faulty, Potentially Faulty, or Normal.
+
+Annotations are displayed in the Analysis Log table, showing the user and time for each action. The log persists across saves and reloads, accurately reflecting when each bounding box was added or edited.
+
+
+### Backend Annotation Persistence
+
+- **Database Table:** Annotations are stored in the `annotations` table in the SQLite database. Each record includes fields for `id`, `inspection_id`, `image_id`, bounding box coordinates, `created_at`, `updated_at`, `user_id`, `notes`, and `classification`.
+- **API Endpoint:** The backend provides `/api/annotations/<inspection_id>` for saving and loading annotations. It accepts annotation data from the frontend and ensures timestamps and user info are preserved.
+- **Persistence Logic:** When annotations are saved, the backend checks for `created_at` and `updated_at` fields from the client and stores them as provided. If missing, it uses the server time. The backend (Flask/Python) exposes REST API endpoints for saving and loading annotations.
+
+### Known Bugs & Limitations
+
+- If the client clock is incorrect, annotation times may be inaccurate, as the backend trusts client-provided timestamps.
+- The annotation log only shows the first occurrence of each action (added, edited, deleted) per annotation for export and API queries with `firstOnly=true`.
+- The system does not currently support collaborative editing (simultaneous multi-user annotation).
+- Only JPEG images are supported for annotation; other formats are ignored.
+- The Flask development server is not suitable for production use.
+
+---
 
 ---
