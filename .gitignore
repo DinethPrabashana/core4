@@ -1,0 +1,32 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+
+# Node/React frontend
+core4/node_modules/
+core4/build/
+core4/.env
+core4/.env.local
+core4/.env.development.local
+core4/.env.test.local
+core4/.env.production.local
+core4/npm-debug.log*
+core4/yarn-debug.log*
+core4/yarn-error.log*
+core4/coverage/
+
+# Python backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.db
+backend/temp_files/
+backend/*.sqlite3
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Misc
+*.log
