@@ -3,3 +3,4 @@ Flask-Cors==4.0.0
 numpy
 opencv-python-headless
 scikit-image # Keep if you plan to use it for more advanced image processing
+reportlab>=4.0.0

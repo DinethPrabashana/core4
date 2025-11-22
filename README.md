@@ -208,17 +208,19 @@ This release adds a complete Maintenance Record workflow on top of Phases 1–3.
 ### What’s included
 
 - New database table: `maintenance_records` to persist records with timestamps, engineer name, status, readings (as JSON), recommended action, notes, annotated image snapshot, anomaly list, and a snapshot `location` (editable per record so you can override or refine the transformer's stored location).
-- Backend REST API (full CRUD):
+- Backend REST API (full CRUD + PDF export):
   - `GET /api/records?transformer_id=...&inspection_id=...` – list records (optionally filter by transformer and inspection)
   - `POST /api/records` – create a record snapshot
   - `GET /api/records/:id` – fetch one record
   - `PUT /api/records/:id` – update an existing record (e.g. notes/status)
   - `DELETE /api/records/:id` – permanently delete a maintenance record
+  - `GET /api/records/export/pdf?transformer_id=...&inspection_id=...` – download a structured PDF of records
 - Frontend UI:
   - In the inspection view, a “Generate Maintenance Record” button appears once an annotated image exists.
-  - A form modal lets you fill: Engineer, Status (OK / Needs Maintenance / Urgent Attention), Voltage/Current, Recommended Action, and Notes. It shows the annotated thermal image and a table of anomalies.
+  - A form modal clearly separates System Data (transformer metadata, inspection number) from Engineer Inputs. Inputs include: Engineer, Status (OK / Needs Maintenance / Urgent Attention), Voltage/Current, Recommended Action, Additional Remarks, and Location. It shows the annotated thermal image and a table of anomalies (with comments).
   - Each inspection row now has a dedicated “Records” button to view only that inspection’s maintenance records (scoped history).
   - Record History modal supports in-table and detail-pane deletion of individual records (with confirmation).
+  - Export PDF button in Record History to download all records for the transformer, optionally scoped to the selected inspection.
   - Print-ready layout via the browser’s print dialog.
   - Human-friendly inspection numbering displayed (e.g. `T1-INSP3`) derived from order of inspections for a transformer.
 
@@ -255,6 +257,21 @@ If it’s a fresh setup, starting the backend after `database.py` initialization
 - `anomalies` (JSON string, array)
 - `location` (string, snapshot of transformer location at time of record; can be edited without changing transformer master record)
 - `created_at`, `updated_at` (string)
+
+### Phase 4 requirements mapping (6.2 FR4)
+
+- FR4.1 Generate Maintenance Record Form
+  - Includes transformer metadata (ID, location, type), inspection number, and record timestamp
+  - Embedded annotated thermal image from analysis with anomaly markers
+  - Anomalies table with type, severity, location, size, and comments
+- FR4.2 Editable Engineer Input Fields
+  - Inputs: Engineer name, status, readings (voltage/current), recommended action, additional remarks, and location
+  - Status uses dropdown; timestamp uses a date-time picker; inputs are visually separated from system-generated content
+- FR4.3 Save and Retrieve Completed Records
+  - Records saved to SQLite with transformer_id, inspection_id, timestamps; retrievable per transformer and per inspection; history viewer included
+
+Additional Technical Requirements
+- Clean, printable UI and export to PDF. Traceability via created_at and updated_at timestamps for each record
 
 ### Notes
 

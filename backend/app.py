@@ -2,12 +2,28 @@ import os
 import uuid
 import json
 import base64
+import io
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 
 # Import logic
 from anomaly_cv import detect_anomalies, BlobDet
 import database as db
+
+# PDF generation
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
+    from reportlab.lib.units import inch
+    from reportlab.lib.utils import ImageReader
+    HAS_REPORTLAB = True
+except Exception:
+    # If reportlab isn't installed, PDF export endpoint will return a helpful error
+    HAS_REPORTLAB = False
+    # Define a safe fallback so module import doesn't fail on default params
+    inch = 72
 
 # --- Flask App Setup ---
 
@@ -319,6 +335,173 @@ def delete_record(record_id):
         return jsonify({'error': 'Not found'}), 404
     db.delete_maintenance_record(record_id)
     return jsonify({'message': 'Record deleted'}), 200
+
+## JSON/CSV export endpoints removed per requirement – keep PDF only.
+
+def _build_inspection_number_map(transformer_id):
+    conn = db.get_db_connection()
+    try:
+        t_row = conn.execute('SELECT id, number, location, type FROM transformers WHERE id = ?', (transformer_id,)).fetchone()
+        transformer = dict(t_row) if t_row else {'id': transformer_id, 'number': str(transformer_id)}
+        insp_rows = conn.execute('SELECT id FROM inspections WHERE transformer_id = ? ORDER BY id ASC', (transformer_id,)).fetchall()
+        inspection_number_by_id = {}
+        idx = 0
+        for r in insp_rows:
+            idx += 1
+            inspection_number_by_id[r['id']] = f"{transformer['number']}-INSP{idx}"
+        return transformer, inspection_number_by_id
+    finally:
+        conn.close()
+
+def _image_from_data_uri(data_uri, max_width=5.5*inch):
+    try:
+        if not data_uri:
+            return None
+        if not isinstance(data_uri, str) or 'base64,' not in data_uri:
+            return None
+        b64 = data_uri.split('base64,', 1)[1]
+        raw = base64.b64decode(b64)
+        bio = io.BytesIO(raw)
+        ir = ImageReader(bio)
+        iw, ih = ir.getSize()
+        scale = min(1.0, max_width / float(iw)) if iw else 1.0
+        img = Image(ir, width=iw*scale, height=ih*scale)
+        return img
+    except Exception:
+        return None
+
+@app.route('/api/records/export/pdf', methods=['GET'])
+def export_records_pdf():
+    """Export maintenance records for a transformer (optionally one inspection) as a structured PDF."""
+    transformer_id = request.args.get('transformer_id', type=int)
+    if not transformer_id:
+        return jsonify({'error': 'transformer_id is required'}), 400
+    inspection_id = request.args.get('inspection_id', type=int)
+
+    # Check reportlab availability
+    if not HAS_REPORTLAB:
+        return jsonify({'error': 'PDF generation requires reportlab. Please install it in backend (pip install reportlab).'}), 500
+
+    transformer, insp_map = _build_inspection_number_map(transformer_id)
+
+    # Fetch records via DB helper (includes parsed JSON fields)
+    records = db.list_maintenance_records(transformer_id=transformer_id, inspection_id=inspection_id)
+    if not records:
+        return jsonify({'error': 'No records found for export'}), 404
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=36, rightMargin=36, topMargin=42, bottomMargin=36)
+    styles = getSampleStyleSheet()
+    story = []
+
+    title_style = styles['Heading1']
+    h2 = styles['Heading2']
+    normal = styles['BodyText']
+
+    # Document title
+    story.append(Paragraph(f"Maintenance Records – {transformer.get('number')} (#{transformer.get('id')})", title_style))
+    if transformer.get('location') or transformer.get('type'):
+        meta_line = f"Location: {transformer.get('location') or 'N/A'}  •  Type: {transformer.get('type') or 'N/A'}"
+        story.append(Paragraph(meta_line, normal))
+    story.append(Spacer(1, 8))
+
+    for idx, rec in enumerate(records):
+        insp_num = insp_map.get(rec.get('inspection_id'))
+        heading = f"Record #{rec.get('id')}"
+        if insp_num:
+            heading += f" – {insp_num}"
+        story.append(Spacer(1, 8 if idx == 0 else 16))
+        story.append(Paragraph(heading, h2))
+
+        # Key facts table
+        krows = [
+            ['Saved At', (rec.get('created_at') or rec.get('record_timestamp') or '')],
+            ['Engineer', rec.get('engineer_name') or ''],
+            ['Status', rec.get('status') or ''],
+            ['Location', rec.get('location') or transformer.get('location') or ''],
+        ]
+        kt = Table(krows, colWidths=[90, 420])
+        kt.setStyle(TableStyle([
+            ('BACKGROUND', (0,0), (0,-1), colors.whitesmoke),
+            ('BOX', (0,0), (-1,-1), 0.5, colors.grey),
+            ('INNERGRID', (0,0), (-1,-1), 0.25, colors.lightgrey),
+            ('VALIGN', (0,0), (-1,-1), 'TOP'),
+            ('FONTNAME', (0,0), (-1,-1), 'Helvetica')
+        ]))
+        story.append(kt)
+        story.append(Spacer(1, 6))
+
+        # Readings
+        readings = rec.get('readings') or {}
+        if isinstance(readings, dict) and readings:
+            rrows = [['Reading', 'Value']]
+            for k, v in readings.items():
+                rrows.append([str(k), str(v)])
+            rt = Table(rrows, colWidths=[120, 200])
+            rt.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke),
+                ('BOX', (0,0), (-1,-1), 0.5, colors.grey),
+                ('INNERGRID', (0,0), (-1,-1), 0.25, colors.lightgrey),
+                ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+            ]))
+            story.append(Paragraph('Readings', styles['Heading3']))
+            story.append(rt)
+            story.append(Spacer(1, 6))
+
+        # Annotated image
+        img = _image_from_data_uri(rec.get('annotated_image'))
+        if img:
+            story.append(Paragraph('Annotated Image', styles['Heading3']))
+            story.append(img)
+            story.append(Spacer(1, 6))
+
+        # Anomalies table
+        anomalies = rec.get('anomalies') or []
+        if isinstance(anomalies, dict):
+            anomalies = list(anomalies.values())
+        anomalies = [a for a in anomalies if not a.get('deleted')]
+        if anomalies:
+            arows = [['#', 'Type', 'Severity', 'Comment', 'Position', 'Size']]
+            for i, a in enumerate(anomalies, start=1):
+                pos = f"({round(a.get('x',0))}, {round(a.get('y',0))})"
+                size = f"{round(a.get('w',0))}×{round(a.get('h',0))}"
+                arows.append([
+                    str(i), a.get('classification') or '', a.get('severity') or '',
+                    (a.get('comment') or ''), pos, size
+                ])
+            at = Table(arows, colWidths=[22, 90, 70, 240, 80, 60])
+            at.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), colors.whitesmoke),
+                ('BOX', (0,0), (-1,-1), 0.5, colors.grey),
+                ('INNERGRID', (0,0), (-1,-1), 0.25, colors.lightgrey),
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('FONTNAME', (0,0), (-1,-1), 'Helvetica')
+            ]))
+            story.append(Paragraph('Anomalies', styles['Heading3']))
+            story.append(at)
+            story.append(Spacer(1, 6))
+
+        # Action and notes
+        rec_act = rec.get('recommended_action') or ''
+        rec_notes = rec.get('notes') or ''
+        if rec_act:
+            story.append(Paragraph('Recommended Action', styles['Heading3']))
+            story.append(Paragraph(rec_act.replace('\n', '<br/>'), normal))
+            story.append(Spacer(1, 4))
+        if rec_notes:
+            story.append(Paragraph('Notes', styles['Heading3']))
+            story.append(Paragraph(rec_notes.replace('\n', '<br/>'), normal))
+
+        if idx < len(records) - 1:
+            story.append(PageBreak())
+
+    doc.build(story)
+    pdf = buffer.getvalue()
+    buffer.close()
+    suffix = f"_insp{inspection_id}" if inspection_id else ""
+    resp = Response(pdf, mimetype='application/pdf')
+    resp.headers['Content-Disposition'] = f'attachment; filename=maintenance_records_t{transformer_id}{suffix}.pdf'
+    return resp
 
 
 if __name__ == '__main__':

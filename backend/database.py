@@ -784,6 +784,106 @@ def delete_maintenance_record(record_id):
     conn.commit()
     conn.close()
 
+def export_maintenance_records_json(transformer_id, inspection_id=None):
+    """Export maintenance records for a transformer (optionally scoped to one inspection) as JSON.
+
+    Includes a human-friendly inspection_number per record: <TransformerNumber>-INSP<index>.
+    """
+    import json as _json
+    # Fetch transformer number for friendly labels and build inspection number map
+    conn = get_db_connection()
+    try:
+        t_row = conn.execute('SELECT id, number FROM transformers WHERE id = ?', (transformer_id,)).fetchone()
+        if not t_row:
+            return _json.dumps({ 'transformer_id': transformer_id, 'records': [] }, indent=2)
+        transformer_number = t_row['number']
+        insp_rows = conn.execute('SELECT id, transformer_id FROM inspections WHERE transformer_id = ? ORDER BY id ASC', (transformer_id,)).fetchall()
+        insp_counter = 0
+        inspection_number_by_id = {}
+        for row in insp_rows:
+            insp_counter += 1
+            inspection_number_by_id[row['id']] = f"{transformer_number}-INSP{insp_counter}"
+
+        # Fetch records
+        if inspection_id:
+            rec_rows = conn.execute(
+                'SELECT * FROM maintenance_records WHERE transformer_id = ? AND inspection_id = ? ORDER BY record_timestamp DESC',
+                (transformer_id, inspection_id)
+            ).fetchall()
+        else:
+            rec_rows = conn.execute(
+                'SELECT * FROM maintenance_records WHERE transformer_id = ? ORDER BY record_timestamp DESC',
+                (transformer_id,)
+            ).fetchall()
+    finally:
+        conn.close()
+
+    payload = {
+        'transformer_id': transformer_id,
+        'transformer_number': transformer_number,
+        'records': []
+    }
+    for r in rec_rows:
+        d = dict_from_row(r)
+        d['readings'] = _json_loads_or_passthrough(d.get('readings'))
+        d['anomalies'] = _json_loads_or_passthrough(d.get('anomalies'))
+        insp_id = d.get('inspection_id')
+        d['inspection_number'] = inspection_number_by_id.get(insp_id)
+        payload['records'].append(d)
+    return _json.dumps(payload, indent=2)
+
+def export_maintenance_records_csv(transformer_id, inspection_id=None):
+    """Export maintenance records as CSV (readings/anomalies embedded as JSON strings)."""
+    import csv
+    from io import StringIO
+
+    # Map transformer number and inspection numbers
+    conn = get_db_connection()
+    try:
+        t_row = conn.execute('SELECT id, number FROM transformers WHERE id = ?', (transformer_id,)).fetchone()
+        transformer_number = t_row['number'] if t_row else str(transformer_id)
+        insp_rows = conn.execute('SELECT id FROM inspections WHERE transformer_id = ? ORDER BY id ASC', (transformer_id,)).fetchall()
+        inspection_number_by_id = {}
+        idx = 0
+        for row in insp_rows:
+            idx += 1
+            inspection_number_by_id[row['id']] = f"{transformer_number}-INSP{idx}"
+
+        if inspection_id:
+            rec_rows = conn.execute('SELECT * FROM maintenance_records WHERE transformer_id = ? AND inspection_id = ? ORDER BY record_timestamp DESC', (transformer_id, inspection_id)).fetchall()
+        else:
+            rec_rows = conn.execute('SELECT * FROM maintenance_records WHERE transformer_id = ? ORDER BY record_timestamp DESC', (transformer_id,)).fetchall()
+    finally:
+        conn.close()
+
+    out = StringIO()
+    fieldnames = [
+        'id','transformer_id','transformer_number','inspection_id','inspection_number','record_timestamp','engineer_name','status','readings','recommended_action','notes','location','annotated_image','anomalies','created_at','updated_at'
+    ]
+    writer = csv.DictWriter(out, fieldnames=fieldnames, lineterminator='\n')
+    writer.writeheader()
+    for r in rec_rows:
+        d = dict_from_row(r)
+        writer.writerow({
+            'id': d.get('id'),
+            'transformer_id': d.get('transformer_id'),
+            'transformer_number': transformer_number,
+            'inspection_id': d.get('inspection_id'),
+            'inspection_number': inspection_number_by_id.get(d.get('inspection_id')),
+            'record_timestamp': d.get('record_timestamp'),
+            'engineer_name': d.get('engineer_name'),
+            'status': d.get('status'),
+            'readings': _json_dumps_or_none(_json_loads_or_passthrough(d.get('readings'))),
+            'recommended_action': d.get('recommended_action'),
+            'notes': d.get('notes'),
+            'location': d.get('location'),
+            'annotated_image': d.get('annotated_image') or '',
+            'anomalies': _json_dumps_or_none(_json_loads_or_passthrough(d.get('anomalies'))),
+            'created_at': d.get('created_at'),
+            'updated_at': d.get('updated_at'),
+        })
+    return out.getvalue()
+
 if __name__ == '__main__':
     # Command to run from terminal in the 'backend' folder: python database.py
     init_db()

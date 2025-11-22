@@ -10,7 +10,23 @@ export default function MaintenanceRecordForm({
 }) {
   const [engineerName, setEngineerName] = useState(inspection?.inspector || "");
   const [status, setStatus] = useState("OK");
-  const [recordTimestamp, setRecordTimestamp] = useState(inspection?.date || new Date().toLocaleString());
+  const toLocalDateTimeInput = (d) => {
+    if (!d) return new Date().toISOString().slice(0,16);
+    try {
+      const parsed = new Date(d);
+      if (!isNaN(parsed.getTime())) {
+        const pad = (n) => String(n).padStart(2, '0');
+        const yr = parsed.getFullYear();
+        const mo = pad(parsed.getMonth()+1);
+        const da = pad(parsed.getDate());
+        const hr = pad(parsed.getHours());
+        const mi = pad(parsed.getMinutes());
+        return `${yr}-${mo}-${da}T${hr}:${mi}`;
+      }
+    } catch (_) {}
+    return new Date().toISOString().slice(0,16);
+  };
+  const [recordTimestamp, setRecordTimestamp] = useState(toLocalDateTimeInput(inspection?.date));
   const [readings, setReadings] = useState({ voltage: "", current: "" });
   const [recommendedAction, setRecommendedAction] = useState("");
   const [notes, setNotes] = useState(inspection?.notes || "");
@@ -108,7 +124,7 @@ export default function MaintenanceRecordForm({
 
   return (
     <div className="modal-overlay" style={{ zIndex: 11000 }}>
-      <div className="modal-card" style={{ maxWidth: 900, zIndex: 11010 }}>
+    <div className="modal-card" style={{ maxWidth: 980, zIndex: 11010 }}>
   <h2>Maintenance Record {inspectionNumber ? `- ${inspectionNumber}` : ''}</h2>
         {saveSuccess && (
           <div style={{background:'#d4edda', color:'#155724', padding:'8px 12px', borderRadius:4, marginBottom:10}}>
@@ -118,20 +134,20 @@ export default function MaintenanceRecordForm({
 
         <div className="modal-flex-horizontal">
           <div className="modal-section">
-            <h3>Transformer</h3>
+            <h3>System Data</h3>
             <p><strong>ID:</strong> {transformer?.number} (#{transformer?.id})</p>
             <p><strong>Location:</strong> {transformer?.location || 'N/A'}</p>
             <p><strong>Capacity/Type:</strong> {transformer?.type || 'N/A'}</p>
           </div>
           <div className="modal-section">
-            <h3>Inspection</h3>
+            <h3>Engineer Inputs</h3>
             {inspectionNumber && (
               <p><strong>Inspection No:</strong> {inspectionNumber}</p>
             )}
             <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
               <label style={{ display:'flex', flexDirection:'column', fontSize:13 }}>
-                <span>Record Timestamp</span>
-                <input type="text" value={recordTimestamp} onChange={e => setRecordTimestamp(e.target.value)} />
+                <span>Record Date/Time</span>
+                <input type="datetime-local" value={recordTimestamp} onChange={e => setRecordTimestamp(e.target.value)} />
               </label>
               <label style={{ display:'flex', flexDirection:'column', fontSize:13 }}>
                 <span>Engineer Name *</span>
@@ -186,6 +202,7 @@ export default function MaintenanceRecordForm({
                   <th>#</th>
                   <th>Type</th>
                   <th>Severity</th>
+                  <th>Comment</th>
                   <th>Position</th>
                   <th>Size</th>
                 </tr>
@@ -196,6 +213,7 @@ export default function MaintenanceRecordForm({
                     <td>{idx + 1}</td>
                     <td>{a.classification || 'N/A'}</td>
                     <td>{a.severity || 'N/A'}</td>
+                    <td>{a.comment ? a.comment : '—'}</td>
                     <td>({Math.round(a.x)}, {Math.round(a.y)})</td>
                     <td>{Math.round(a.w)}x{Math.round(a.h)}</td>
                   </tr>

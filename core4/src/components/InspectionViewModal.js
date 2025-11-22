@@ -1,6 +1,7 @@
 // InspectionViewModalWithAI.jsx
 import React, { useState, useEffect, useRef } from "react";
 import MaintenanceRecordForm from "./MaintenanceRecordForm";
+import ZoomAnnotatedImage from "./ZoomAnnotatedImage";
 import '../style/InspectionViewModal.css';
 
 export default function InspectionViewModal({
@@ -111,6 +112,16 @@ export default function InspectionViewModal({
   const [resizeHandle, setResizeHandle] = useState(null); // Which handle is being dragged
   const [isDragging, setIsDragging] = useState(false); // Track if user is dragging to reposition
   const [showRecordForm, setShowRecordForm] = useState(false);
+  const [viewMode, setViewMode] = useState('zoom'); // 'edit' | 'zoom' — default to zoom for better clarity
+
+  // When annotated image becomes available, prefer zoom view by default
+  useEffect(() => {
+    if (annotatedImage) {
+      setViewMode('zoom');
+      setIsAddingBox(false);
+      setNewBoxStart(null);
+    }
+  }, [annotatedImage]);
 
   // Auto-save annotations when they change
   useEffect(() => {
@@ -797,6 +808,14 @@ export default function InspectionViewModal({
               >
                 {isRunningAI ? "Running AI..." : "Run AI Analysis"}
               </button>
+              {annotatedImage && (
+                <button
+                  style={{ marginLeft: 8 }}
+                  onClick={() => setViewMode(v => v === 'edit' ? 'zoom' : 'edit')}
+                >
+                  {viewMode === 'edit' ? 'View (Zoom/Pan)' : 'Edit Annotations'}
+                </button>
+              )}
               <button
                 className={isAddingBox ? "cancel-draw-btn" : ""}
                 style={{ marginLeft: 8 }}
@@ -808,7 +827,7 @@ export default function InspectionViewModal({
                     setIsAddingBox(true);
                   }
                 }}
-                disabled={!annotatedImage}
+                disabled={!annotatedImage || viewMode !== 'edit'}
               >
                 {isAddingBox ? "Cancel Drawing" : "Add Manual Box"}
               </button>
@@ -834,43 +853,47 @@ export default function InspectionViewModal({
 
               <div className="image-card">
                 <h4>{annotatedImage ? "AI Annotated Image" : "Thermal Image"}</h4>
-                <div className="image-box" style={{ overflow: 'auto' }}>
+                <div className="image-box" style={{ overflow: 'hidden' }}>
                   {annotatedImage ? (
-                    <div
-                      className="annotation-container"
-                      style={{
-                        position: 'relative',
-                        transform: `scale(${zoomLevel})`,
-                        transformOrigin: 'top left',
-                      }}
-                    >
-                      <img
-                        ref={annotatedImgRef}
-                        src={annotatedImage}
-                        alt="Annotated"
-                        onLoad={() => setImageLoaded(Date.now())}
-                        onMouseDown={onAnnotatedMouseDown}
-                        onMouseUp={onAnnotatedMouseUp}
-                        style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
-                      />
+                    viewMode === 'zoom' ? (
+                      <ZoomAnnotatedImage src={annotatedImage} anomalies={visibleAnomalies} height={380} />
+                    ) : (
                       <div
-                        ref={annotLayerRef}
-                        style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
+                        className="annotation-container"
+                        style={{
+                          position: 'relative',
+                          transform: `scale(${zoomLevel})`,
+                          transformOrigin: 'top left',
+                        }}
                       >
-                        {renderAnomalyOverlays(imageLoaded)}
+                        <img
+                          ref={annotatedImgRef}
+                          src={annotatedImage}
+                          alt="Annotated"
+                          onLoad={() => setImageLoaded(Date.now())}
+                          onMouseDown={onAnnotatedMouseDown}
+                          onMouseUp={onAnnotatedMouseUp}
+                          style={{ display: 'block', width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                        <div
+                          ref={annotLayerRef}
+                          style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', width: '100%', height: '100%' }}
+                        >
+                          {renderAnomalyOverlays(imageLoaded)}
+                        </div>
                       </div>
-                    </div>
+                    )
                   ) : (
                     <img src={maintenanceImageURL} alt="Thermal" style={{ maxWidth: '100%', objectFit: 'contain' }} />
                   )}
                 </div>
                 <div className="image-info">
-                  <p><strong>Date & Time:</strong> {inspection.date || "N/A"}</p>
+                  <p><strong>Date & Time:</strong> {maintenanceUploadDate || inspection.date || "N/A"}</p>
                   <p><strong>Weather:</strong> {maintenanceWeather || "N/A"}</p>
                   <p><strong>Uploader:</strong> {uploader}</p>
-                  <p><strong>Image Type:</strong> Maintenance</p>
+                  <p><strong>Image Type:</strong> {annotatedImage ? 'AI Annotated' : 'Maintenance'}</p>
                 </div>
-                {annotatedImage && (
+                {annotatedImage && viewMode === 'edit' && (
                   <div className="zoom-slider-container">
                     <label htmlFor="zoom-slider">Zoom: {Math.round(zoomLevel * 100)}%</label>
                     <input

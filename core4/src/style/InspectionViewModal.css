@@ -379,6 +379,13 @@
   width: 100%;
 }
 
+/* Make the zoom viewer UI fit within the inspection image box */
+.image-box .annotated-wrap { padding: 6px; width: 100%; }
+.image-box .zoom-toolbar { margin-bottom: 4px; gap: 6px; }
+.image-box .zoom-toolbar .btn { padding: 3px 6px; }
+.image-box .zoom-toolbar .zoom-level { min-width: 36px; font-size: 11px; }
+.image-box .hint { display: none; }
+
 .inspection-modal-buttons {
   display: flex;
   justify-content: flex-end;
