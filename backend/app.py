@@ -276,6 +276,42 @@ def export_annotation_logs_csv():
     response.headers['Content-Disposition'] = 'attachment; filename=annotation_logs.csv'
     return response
 
+# --- Maintenance Records API (Phase 4) ---
+
+@app.route('/api/records', methods=['GET', 'POST'])
+def handle_records():
+    if request.method == 'GET':
+        transformer_id = request.args.get('transformer_id', type=int)
+        inspection_id = request.args.get('inspection_id', type=int)
+        records = db.list_maintenance_records(transformer_id=transformer_id, inspection_id=inspection_id)
+        return jsonify(records)
+    if request.method == 'POST':
+        data = request.json
+        saved = db.add_maintenance_record(data)
+        return jsonify(saved), 201
+
+@app.route('/api/records/<int:record_id>', methods=['GET', 'PUT'])
+def handle_record(record_id):
+    if request.method == 'GET':
+        rec = db.get_maintenance_record(record_id)
+        if rec is None:
+            return jsonify({'error': 'Not found'}), 404
+        return jsonify(rec)
+    if request.method == 'PUT':
+        data = request.json
+        rec = db.update_maintenance_record(record_id, data)
+        if rec is None:
+            return jsonify({'error': 'Not found'}), 404
+        return jsonify(rec)
+
+@app.route('/api/records/<int:record_id>', methods=['DELETE'])
+def delete_record(record_id):
+    rec = db.get_maintenance_record(record_id)
+    if rec is None:
+        return jsonify({'error': 'Not found'}), 404
+    db.delete_maintenance_record(record_id)
+    return jsonify({'message': 'Record deleted'}), 200
+
 
 if __name__ == '__main__':
     # This makes the server accessible on your local network

@@ -30,9 +30,12 @@ def check_tables_exist():
     
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='annotation_logs'")
     logs_exists = cursor.fetchone() is not None
+
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='maintenance_records'")
+    records_exists = cursor.fetchone() is not None
     
     conn.close()
-    return annotations_exists, logs_exists
+    return annotations_exists, logs_exists, records_exists
 
 def migrate_database():
     """Add new annotation tables to existing database"""
@@ -83,6 +86,28 @@ def migrate_database():
             )
         ''')
         print("✓ Created 'annotation_logs' table")
+        
+        # Create maintenance_records table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS maintenance_records (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                transformer_id INTEGER NOT NULL,
+                inspection_id INTEGER,
+                record_timestamp TEXT NOT NULL,
+                engineer_name TEXT,
+                status TEXT,
+                readings TEXT,
+                recommended_action TEXT,
+                notes TEXT,
+                annotated_image TEXT,
+                anomalies TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (transformer_id) REFERENCES transformers (id) ON DELETE CASCADE,
+                FOREIGN KEY (inspection_id) REFERENCES inspections (id) ON DELETE SET NULL
+            )
+        ''')
+        print("✓ Created 'maintenance_records' table")
         
         conn.commit()
         print("\n✓ Migration completed successfully!")
@@ -144,9 +169,9 @@ def main():
         return
     
     # Check what already exists
-    annotations_exists, logs_exists = check_tables_exist()
+    annotations_exists, logs_exists, records_exists = check_tables_exist()
     
-    if annotations_exists and logs_exists:
+    if annotations_exists and logs_exists and records_exists:
         print("\n✓ Annotation tables already exist. No migration needed.")
         print("\nOptions:")
         print("1. Exit (no changes)")
@@ -164,6 +189,7 @@ def main():
     print("\nExisting database found. Preparing migration...")
     print(f"  - Annotations table exists: {annotations_exists}")
     print(f"  - Annotation logs table exists: {logs_exists}")
+    print(f"  - Maintenance records table exists: {records_exists}")
     
     # Create backup
     if backup_database():

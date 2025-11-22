@@ -453,3 +453,10 @@
   width: 100%;
   background-color: #fff;
 }
+
+/* Print styles for Maintenance Record modal */
+@media print {
+  body * { visibility: hidden; }
+  .modal-card, .modal-card * { visibility: visible; }
+  .modal-card { position: absolute; left: 0; top: 0; width: 100%; box-shadow: none; }
+}

@@ -1,5 +1,6 @@
 // InspectionViewModalWithAI.jsx
 import React, { useState, useEffect, useRef } from "react";
+import MaintenanceRecordForm from "./MaintenanceRecordForm";
 import '../style/InspectionViewModal.css';
 
 export default function InspectionViewModal({
@@ -109,6 +110,7 @@ export default function InspectionViewModal({
   const [isResizing, setIsResizing] = useState(false); // Track if user is resizing
   const [resizeHandle, setResizeHandle] = useState(null); // Which handle is being dragged
   const [isDragging, setIsDragging] = useState(false); // Track if user is dragging to reposition
+  const [showRecordForm, setShowRecordForm] = useState(false);
 
   // Auto-save annotations when they change
   useEffect(() => {
@@ -991,6 +993,9 @@ export default function InspectionViewModal({
         )}
 
         <div className="inspection-modal-buttons" style={{ marginTop: 12 }}>
+          <button onClick={() => setShowRecordForm(true)} disabled={!annotatedImage} title={!annotatedImage ? 'Run AI to generate annotated image first' : 'Generate a maintenance record'}>
+            Generate Maintenance Record
+          </button>
           {progressStatus.aiAnalysis === "Completed" && (
             <button className="inspection-complete-btn" onClick={handleComplete}>Complete Reviewing</button>
           )}
@@ -998,6 +1003,16 @@ export default function InspectionViewModal({
           <button onClick={onClose} className="inspection-cancel-btn">Close</button>
         </div>
       </div>
+      {showRecordForm && (
+        <MaintenanceRecordForm
+          transformer={transformer}
+          inspection={inspection}
+          anomalies={anomalies}
+          annotatedImage={annotatedImage}
+          onSaved={() => { /* optional post-save hook */ }}
+          onClose={() => setShowRecordForm(false)}
+        />
+      )}
     </div>
   );
 }

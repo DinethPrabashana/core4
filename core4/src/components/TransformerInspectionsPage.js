@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import InspectionModal from "./InspectionModal";
+import RecordHistory from "./RecordHistory";
 import "../style/TransformerInspectionsPage.css";
 
 export default function TransformerInspectionsPage({
@@ -19,6 +20,8 @@ export default function TransformerInspectionsPage({
     inspector: "",
     notes: ""
   });
+  const [showRecordHistoryModal, setShowRecordHistoryModal] = useState(false);
+  const [recordHistoryInspection, setRecordHistoryInspection] = useState(null);
 
   // --- Helper to get current status based on progress ---
   const getInspectionStatus = (inspection) => {
@@ -100,6 +103,7 @@ export default function TransformerInspectionsPage({
       >
         + Add Inspection
       </button>
+      {/* Removed transformer-wide records button; access records per inspection */}
 
       <table className="inspection-table">
         <thead>
@@ -109,6 +113,7 @@ export default function TransformerInspectionsPage({
             <th>Maintenance Info</th>
             <th>Status</th>
             <th>Actions</th>
+            <th>Records</th>
           </tr>
         </thead>
         <tbody>
@@ -137,11 +142,20 @@ export default function TransformerInspectionsPage({
                     Delete
                   </button>
                 </td>
+                <td>
+                  <button
+                    className="inspection-btn view-btn"
+                    title="View maintenance records for this inspection"
+                    onClick={() => { setRecordHistoryInspection(i); setShowRecordHistoryModal(true); }}
+                  >
+                    Records
+                  </button>
+                </td>
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={5} style={{ textAlign: "center" }}>
+              <td colSpan={6} style={{ textAlign: "center" }}>
                 No inspections found.
               </td>
             </tr>
@@ -159,6 +173,14 @@ export default function TransformerInspectionsPage({
           handleScheduleInspection={handleAddInspection}
           onClose={() => setShowAddInspectionModal(false)}
           disableTransformerSelect={true}
+        />
+      )}
+
+      {showRecordHistoryModal && recordHistoryInspection && (
+        <RecordHistory
+          transformer={transformer}
+          inspection={recordHistoryInspection}
+          onClose={() => { setShowRecordHistoryModal(false); setRecordHistoryInspection(null); }}
         />
       )}
     </div>

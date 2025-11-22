@@ -2,6 +2,7 @@ DROP TABLE IF EXISTS annotation_logs;
 DROP TABLE IF EXISTS annotations;
 DROP TABLE IF EXISTS inspections;
 DROP TABLE IF EXISTS transformers;
+DROP TABLE IF EXISTS maintenance_records;
 
 CREATE TABLE transformers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,4 +69,23 @@ CREATE TABLE annotation_logs (
     notes TEXT,
     FOREIGN KEY (inspection_id) REFERENCES inspections (id) ON DELETE CASCADE,
     FOREIGN KEY (transformer_id) REFERENCES transformers (id) ON DELETE CASCADE
+);
+
+-- Table to store finalized maintenance records (Phase 4)
+CREATE TABLE maintenance_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transformer_id INTEGER NOT NULL,
+    inspection_id INTEGER,
+    record_timestamp TEXT NOT NULL,
+    engineer_name TEXT,
+    status TEXT, -- OK / Needs Maintenance / Urgent Attention
+    readings TEXT, -- JSON string of key-value pairs (e.g., voltage, current, etc.)
+    recommended_action TEXT,
+    notes TEXT,
+    annotated_image TEXT, -- snapshot of annotated image at record time (data URI or URL)
+    anomalies TEXT, -- JSON array of anomaly objects
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (transformer_id) REFERENCES transformers (id) ON DELETE CASCADE,
+    FOREIGN KEY (inspection_id) REFERENCES inspections (id) ON DELETE SET NULL
 );

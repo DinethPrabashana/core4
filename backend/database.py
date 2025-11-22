@@ -161,18 +161,34 @@ def delete_inspection(inspection_id):
 # --- Annotation Functions ---
 
 def save_annotations(inspection_id, annotations, user_id='Admin'):
-    """Save or update annotations for an inspection."""
+    """Save or update annotations for an inspection.
+
+    Note: The annotations table enforces a UNIQUE constraint on annotation_id.
+    To avoid collisions across inspections (e.g., many inspections use 'ai_1'),
+    we store a namespaced ID: f"{inspection_id}__{id}" in annotation_id.
+    When loading, we strip this prefix back to the original id for the UI.
+    """
     from datetime import datetime
     conn = get_db_connection()
     timestamp = datetime.now().isoformat()
-    
+
+    def _to_storage_id(insp_id, ann_id):
+        ann_id = str(ann_id)
+        prefix = f"{insp_id}__"
+        # Avoid double-prefixing if already stored format
+        if ann_id.startswith(prefix):
+            return ann_id
+        return prefix + ann_id
+
     for annot in annotations:
-        # Check if annotation exists
+        storage_id = _to_storage_id(inspection_id, annot['id'])
+
+        # Check if annotation exists for this inspection (by storage id)
         existing = conn.execute(
             'SELECT id FROM annotations WHERE annotation_id = ?',
-            (annot['id'],)
+            (storage_id,)
         ).fetchone()
-        
+
         if existing:
             # Update existing annotation
             conn.execute(
@@ -183,7 +199,7 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
                 (annot['x'], annot['y'], annot['w'], annot['h'], 
                  annot.get('confidence'), annot.get('severity'), 
                  annot.get('classification'), annot.get('comment', ''),
-                 1 if annot.get('deleted') else 0, timestamp, annot['id'])
+                 1 if annot.get('deleted') else 0, timestamp, storage_id)
             )
         else:
             # Insert new annotation
@@ -192,25 +208,38 @@ def save_annotations(inspection_id, annotations, user_id='Admin'):
                    (inspection_id, annotation_id, x, y, w, h, confidence, severity, 
                     classification, comment, source, deleted, user_id, created_at, updated_at)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                (inspection_id, annot['id'], annot['x'], annot['y'], annot['w'], annot['h'],
+                (inspection_id, storage_id, annot['x'], annot['y'], annot['w'], annot['h'],
                  annot.get('confidence'), annot.get('severity'), 
                  annot.get('classification'), annot.get('comment', ''),
                  annot.get('source', 'user'), 1 if annot.get('deleted') else 0,
                  user_id, timestamp, timestamp)
             )
-    
+
     conn.commit()
     conn.close()
 
 def get_annotations(inspection_id):
-    """Retrieve all annotations for an inspection."""
+    """Retrieve all annotations for an inspection.
+
+    Strips the storage prefix '<inspection_id>__' from annotation_id before returning
+    to the client so UI sees the original id values.
+    """
     conn = get_db_connection()
     annotations = conn.execute(
         'SELECT * FROM annotations WHERE inspection_id = ?',
         (inspection_id,)
     ).fetchall()
     conn.close()
-    return [dict_from_row(row) for row in annotations]
+
+    prefix = f"{inspection_id}__"
+    result = []
+    for row in annotations:
+        d = dict_from_row(row)
+        ann_id = d.get('annotation_id')
+        if isinstance(ann_id, str) and ann_id.startswith(prefix):
+            d['annotation_id'] = ann_id[len(prefix):]
+        result.append(d)
+    return result
 
 def log_annotation_action(inspection_id, transformer_id, action_type, annotation_data, 
                           ai_prediction=None, user_annotation=None, user_id='Admin', notes=None):
@@ -544,6 +573,152 @@ def first_occurrence_with_merged_notes(logs, sort_order='asc'):
     reverse = (sort_order == 'desc')
     merged.sort(key=lambda l: _parse_ts(l.get('timestamp') or ""), reverse=reverse)
     return merged
+
+# --- Maintenance Records (Phase 4) ---
+
+def _json_dumps_or_none(obj):
+    try:
+        return json.dumps(obj) if obj is not None else None
+    except Exception:
+        return None
+
+def _json_loads_or_passthrough(val):
+    if val is None:
+        return None
+    try:
+        return json.loads(val)
+    except Exception:
+        return val
+
+def add_maintenance_record(record):
+    """Create a maintenance record.
+
+    Expected record keys:
+      transformer_id (int), inspection_id (int or None), record_timestamp (str),
+      engineer_name (str), status (str), readings (dict), recommended_action (str),
+      notes (str), annotated_image (str), anomalies (list)
+    """
+    from datetime import datetime
+    conn = get_db_connection()
+    now = datetime.now().isoformat()
+    cursor = conn.execute(
+        '''INSERT INTO maintenance_records
+           (transformer_id, inspection_id, record_timestamp, engineer_name, status, readings, recommended_action, notes, annotated_image, anomalies, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (
+            record.get('transformer_id'),
+            record.get('inspection_id'),
+            record.get('record_timestamp') or now,
+            record.get('engineer_name'),
+            record.get('status'),
+            _json_dumps_or_none(record.get('readings')),
+            record.get('recommended_action'),
+            record.get('notes'),
+            record.get('annotated_image'),
+            _json_dumps_or_none(record.get('anomalies')),
+            now,
+            now
+        )
+    )
+    new_id = cursor.lastrowid
+    conn.commit()
+    # Return the row
+    row = conn.execute('SELECT * FROM maintenance_records WHERE id = ?', (new_id,)).fetchone()
+    conn.close()
+    rec = dict_from_row(row)
+    rec['readings'] = _json_loads_or_passthrough(rec.get('readings'))
+    rec['anomalies'] = _json_loads_or_passthrough(rec.get('anomalies'))
+    return rec
+
+def update_maintenance_record(record_id, record):
+    """Update an existing maintenance record by id."""
+    from datetime import datetime
+    conn = get_db_connection()
+    now = datetime.now().isoformat()
+    conn.execute(
+        '''UPDATE maintenance_records SET
+               transformer_id = ?,
+               inspection_id = ?,
+               record_timestamp = ?,
+               engineer_name = ?,
+               status = ?,
+               readings = ?,
+               recommended_action = ?,
+               notes = ?,
+               annotated_image = ?,
+               anomalies = ?,
+               updated_at = ?
+           WHERE id = ?''',
+        (
+            record.get('transformer_id'),
+            record.get('inspection_id'),
+            record.get('record_timestamp') or now,
+            record.get('engineer_name'),
+            record.get('status'),
+            _json_dumps_or_none(record.get('readings')),
+            record.get('recommended_action'),
+            record.get('notes'),
+            record.get('annotated_image'),
+            _json_dumps_or_none(record.get('anomalies')),
+            now,
+            record_id
+        )
+    )
+    conn.commit()
+    row = conn.execute('SELECT * FROM maintenance_records WHERE id = ?', (record_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    rec = dict_from_row(row)
+    rec['readings'] = _json_loads_or_passthrough(rec.get('readings'))
+    rec['anomalies'] = _json_loads_or_passthrough(rec.get('anomalies'))
+    return rec
+
+def get_maintenance_record(record_id):
+    conn = get_db_connection()
+    row = conn.execute('SELECT * FROM maintenance_records WHERE id = ?', (record_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    rec = dict_from_row(row)
+    rec['readings'] = _json_loads_or_passthrough(rec.get('readings'))
+    rec['anomalies'] = _json_loads_or_passthrough(rec.get('anomalies'))
+    return rec
+
+def list_maintenance_records(transformer_id=None, inspection_id=None):
+    conn = get_db_connection()
+    if transformer_id and inspection_id:
+        rows = conn.execute(
+            'SELECT * FROM maintenance_records WHERE transformer_id = ? AND inspection_id = ? ORDER BY record_timestamp DESC',
+            (transformer_id, inspection_id)
+        ).fetchall()
+    elif transformer_id:
+        rows = conn.execute(
+            'SELECT * FROM maintenance_records WHERE transformer_id = ? ORDER BY record_timestamp DESC',
+            (transformer_id,)
+        ).fetchall()
+    elif inspection_id:
+        rows = conn.execute(
+            'SELECT * FROM maintenance_records WHERE inspection_id = ? ORDER BY record_timestamp DESC',
+            (inspection_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute('SELECT * FROM maintenance_records ORDER BY record_timestamp DESC').fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        rec = dict_from_row(r)
+        rec['readings'] = _json_loads_or_passthrough(rec.get('readings'))
+        rec['anomalies'] = _json_loads_or_passthrough(rec.get('anomalies'))
+        result.append(rec)
+    return result
+
+def delete_maintenance_record(record_id):
+    """Delete a maintenance record by id."""
+    conn = get_db_connection()
+    conn.execute('DELETE FROM maintenance_records WHERE id = ?', (record_id,))
+    conn.commit()
+    conn.close()
 
 if __name__ == '__main__':
     # Command to run from terminal in the 'backend' folder: python database.py

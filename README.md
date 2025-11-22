@@ -198,3 +198,66 @@ Annotations are displayed in the Analysis Log table, showing the user and time f
 - **Database Table:** Annotations are stored in the `annotations` table in the SQLite database. Each record includes fields for `id`, `inspection_id`, `image_id`, bounding box coordinates, `created_at`, `updated_at`, `user_id`, `notes`, and `classification`.
 - **API Endpoint:** The backend provides `/api/annotations/<inspection_id>` for saving and loading annotations. It accepts annotation data from the frontend and ensures timestamps and user info are preserved.
 - **Persistence Logic:** When annotations are saved, the backend checks for `created_at` and `updated_at` fields from the client and stores them as provided. If missing, it uses the server time. The backend (Flask/Python) exposes REST API endpoints for saving and loading annotations.
+
+---
+
+## Phase 4 – Maintenance Record Sheet Generation
+
+This release adds a complete Maintenance Record workflow on top of Phases 1–3. Engineers can now generate a printable digital record for each inspection, including transformer metadata, the annotated thermal image, anomaly list, editable fields, and saved historical records.
+
+### What’s included
+
+- New database table: `maintenance_records` to persist records with timestamps, engineer name, status, readings (as JSON), recommended action, notes, annotated image snapshot, and anomaly list.
+- Backend REST API (full CRUD):
+  - `GET /api/records?transformer_id=...&inspection_id=...` – list records (optionally filter by transformer and inspection)
+  - `POST /api/records` – create a record snapshot
+  - `GET /api/records/:id` – fetch one record
+  - `PUT /api/records/:id` – update an existing record (e.g. notes/status)
+  - `DELETE /api/records/:id` – permanently delete a maintenance record
+- Frontend UI:
+  - In the inspection view, a “Generate Maintenance Record” button appears once an annotated image exists.
+  - A form modal lets you fill: Engineer, Status (OK / Needs Maintenance / Urgent Attention), Voltage/Current, Recommended Action, and Notes. It shows the annotated thermal image and a table of anomalies.
+  - Each inspection row now has a dedicated “Records” button to view only that inspection’s maintenance records (scoped history).
+  - Record History modal supports in-table and detail-pane deletion of individual records (with confirmation).
+  - Print-ready layout via the browser’s print dialog.
+  - Human-friendly inspection numbering displayed (e.g. `T1-INSP3`) derived from order of inspections for a transformer.
+
+### One-time migration
+
+If you already have an existing database, run a one-time migration to create the new `maintenance_records` table:
+
+```bat
+cd "core4\\backend" && python migrate_database.py
+```
+
+If it’s a fresh setup, starting the backend after `database.py` initialization will already include the table via `schema.sql`.
+
+### How to use
+
+1. Open any inspection and run AI analysis, review and annotate if needed.
+2. Click “Generate Maintenance Record”.
+3. Fill in engineer inputs and save. This stores a snapshot of the annotated image and anomaly list.
+4. To view history for a specific inspection, open the transformer’s inspections page and click that inspection’s “Records” button.
+5. In the Record History modal you can select a record to view details or delete it.
+
+### Data model (maintenance_records)
+
+- `id` (PK)
+- `transformer_id` (FK)
+- `inspection_id` (FK, nullable)
+- `record_timestamp` (string)
+- `engineer_name` (string)
+- `status` (string)
+- `readings` (JSON string, e.g., { voltage, current })
+- `recommended_action` (string)
+- `notes` (string)
+- `annotated_image` (string, data URI)
+- `anomalies` (JSON string, array)
+- `created_at`, `updated_at` (string)
+
+### Notes
+
+- The record captures a snapshot. Subsequent changes to annotations do not retroactively alter saved records.
+- You can print the record form via the browser’s print dialog for PDF-ready export.
+- Deleting a record is irreversible; deletions are not currently logged (future enhancement could add audit trail).
+- Inspection numbers (`<TransformerNumber>-INSP<index>`) are assigned by chronological order (ascending ID) within each transformer.
