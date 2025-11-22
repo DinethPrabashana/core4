@@ -84,6 +84,7 @@ CREATE TABLE maintenance_records (
     notes TEXT,
     annotated_image TEXT, -- snapshot of annotated image at record time (data URI or URL)
     anomalies TEXT, -- JSON array of anomaly objects
+    location TEXT, -- snapshot of transformer location at record time (can be edited per record)
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (transformer_id) REFERENCES transformers (id) ON DELETE CASCADE,

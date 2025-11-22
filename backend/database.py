@@ -601,25 +601,52 @@ def add_maintenance_record(record):
     from datetime import datetime
     conn = get_db_connection()
     now = datetime.now().isoformat()
-    cursor = conn.execute(
-        '''INSERT INTO maintenance_records
-           (transformer_id, inspection_id, record_timestamp, engineer_name, status, readings, recommended_action, notes, annotated_image, anomalies, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (
-            record.get('transformer_id'),
-            record.get('inspection_id'),
-            record.get('record_timestamp') or now,
-            record.get('engineer_name'),
-            record.get('status'),
-            _json_dumps_or_none(record.get('readings')),
-            record.get('recommended_action'),
-            record.get('notes'),
-            record.get('annotated_image'),
-            _json_dumps_or_none(record.get('anomalies')),
-            now,
-            now
+    try:
+        cursor = conn.execute(
+            '''INSERT INTO maintenance_records
+               (transformer_id, inspection_id, record_timestamp, engineer_name, status, readings, recommended_action, notes, annotated_image, anomalies, location, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            (
+                record.get('transformer_id'),
+                record.get('inspection_id'),
+                record.get('record_timestamp') or now,
+                record.get('engineer_name'),
+                record.get('status'),
+                _json_dumps_or_none(record.get('readings')),
+                record.get('recommended_action'),
+                record.get('notes'),
+                record.get('annotated_image'),
+                _json_dumps_or_none(record.get('anomalies')),
+                record.get('location'),
+                now,
+                now
+            )
         )
-    )
+    except Exception as e:
+        # Fallback for older schema without location column
+        if 'location' in str(e).lower():
+            cursor = conn.execute(
+                '''INSERT INTO maintenance_records
+                   (transformer_id, inspection_id, record_timestamp, engineer_name, status, readings, recommended_action, notes, annotated_image, anomalies, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                (
+                    record.get('transformer_id'),
+                    record.get('inspection_id'),
+                    record.get('record_timestamp') or now,
+                    record.get('engineer_name'),
+                    record.get('status'),
+                    _json_dumps_or_none(record.get('readings')),
+                    record.get('recommended_action'),
+                    record.get('notes'),
+                    record.get('annotated_image'),
+                    _json_dumps_or_none(record.get('anomalies')),
+                    now,
+                    now
+                )
+            )
+        else:
+            conn.close()
+            raise
     new_id = cursor.lastrowid
     conn.commit()
     # Return the row
@@ -635,35 +662,72 @@ def update_maintenance_record(record_id, record):
     from datetime import datetime
     conn = get_db_connection()
     now = datetime.now().isoformat()
-    conn.execute(
-        '''UPDATE maintenance_records SET
-               transformer_id = ?,
-               inspection_id = ?,
-               record_timestamp = ?,
-               engineer_name = ?,
-               status = ?,
-               readings = ?,
-               recommended_action = ?,
-               notes = ?,
-               annotated_image = ?,
-               anomalies = ?,
-               updated_at = ?
-           WHERE id = ?''',
-        (
-            record.get('transformer_id'),
-            record.get('inspection_id'),
-            record.get('record_timestamp') or now,
-            record.get('engineer_name'),
-            record.get('status'),
-            _json_dumps_or_none(record.get('readings')),
-            record.get('recommended_action'),
-            record.get('notes'),
-            record.get('annotated_image'),
-            _json_dumps_or_none(record.get('anomalies')),
-            now,
-            record_id
+    try:
+        conn.execute(
+            '''UPDATE maintenance_records SET
+                   transformer_id = ?,
+                   inspection_id = ?,
+                   record_timestamp = ?,
+                   engineer_name = ?,
+                   status = ?,
+                   readings = ?,
+                   recommended_action = ?,
+                   notes = ?,
+                   annotated_image = ?,
+                   anomalies = ?,
+                   location = ?,
+                   updated_at = ?
+               WHERE id = ?''',
+            (
+                record.get('transformer_id'),
+                record.get('inspection_id'),
+                record.get('record_timestamp') or now,
+                record.get('engineer_name'),
+                record.get('status'),
+                _json_dumps_or_none(record.get('readings')),
+                record.get('recommended_action'),
+                record.get('notes'),
+                record.get('annotated_image'),
+                _json_dumps_or_none(record.get('anomalies')),
+                record.get('location'),
+                now,
+                record_id
+            )
         )
-    )
+    except Exception as e:
+        if 'location' in str(e).lower():
+            conn.execute(
+                '''UPDATE maintenance_records SET
+                       transformer_id = ?,
+                       inspection_id = ?,
+                       record_timestamp = ?,
+                       engineer_name = ?,
+                       status = ?,
+                       readings = ?,
+                       recommended_action = ?,
+                       notes = ?,
+                       annotated_image = ?,
+                       anomalies = ?,
+                       updated_at = ?
+                   WHERE id = ?''',
+                (
+                    record.get('transformer_id'),
+                    record.get('inspection_id'),
+                    record.get('record_timestamp') or now,
+                    record.get('engineer_name'),
+                    record.get('status'),
+                    _json_dumps_or_none(record.get('readings')),
+                    record.get('recommended_action'),
+                    record.get('notes'),
+                    record.get('annotated_image'),
+                    _json_dumps_or_none(record.get('anomalies')),
+                    now,
+                    record_id
+                )
+            )
+        else:
+            conn.close()
+            raise
     conn.commit()
     row = conn.execute('SELECT * FROM maintenance_records WHERE id = ?', (record_id,)).fetchone()
     conn.close()

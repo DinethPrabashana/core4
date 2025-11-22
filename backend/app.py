@@ -286,9 +286,17 @@ def handle_records():
         records = db.list_maintenance_records(transformer_id=transformer_id, inspection_id=inspection_id)
         return jsonify(records)
     if request.method == 'POST':
-        data = request.json
-        saved = db.add_maintenance_record(data)
-        return jsonify(saved), 201
+        try:
+            data = request.json or {}
+            saved = db.add_maintenance_record(data)
+            # If location wasn't persisted (older schema), propagate requested value for UI consistency
+            if 'location' not in saved and data.get('location'):
+                saved['location'] = data.get('location')
+            return jsonify(saved), 201
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': 'Failed to save record', 'detail': str(e)}), 500
 
 @app.route('/api/records/<int:record_id>', methods=['GET', 'PUT'])
 def handle_record(record_id):

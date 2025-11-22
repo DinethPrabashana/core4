@@ -14,6 +14,7 @@ export default function MaintenanceRecordForm({
   const [readings, setReadings] = useState({ voltage: "", current: "" });
   const [recommendedAction, setRecommendedAction] = useState("");
   const [notes, setNotes] = useState(inspection?.notes || "");
+  const [location, setLocation] = useState(transformer?.location || "");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [inspectionNumber, setInspectionNumber] = useState(null);
@@ -69,15 +70,18 @@ export default function MaintenanceRecordForm({
         recommended_action: recommendedAction,
         notes,
         annotated_image: annotatedImage || inspection?.annotatedImage || null,
+        location: location || transformer?.location || '',
         anomalies: (anomalies && anomalies.length ? anomalies : (inspection?.anomalies || [])).map(a => ({
           id: a.id,
           x: a.x,
-            y: a.y,
-            w: a.w,
-            h: a.h,
-            severity: a.severity,
-            classification: a.classification,
-            deleted: !!a.deleted
+          y: a.y,
+          w: a.w,
+          h: a.h,
+          severity: a.severity,
+          classification: a.classification,
+          comment: a.comment || a.notes || '',
+          source: a.source || (a.confidence !== undefined ? 'ai' : 'user'),
+          deleted: !!a.deleted
         }))
       };
       const res = await fetch('http://localhost:8000/api/records', {
@@ -139,6 +143,10 @@ export default function MaintenanceRecordForm({
                   {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
+              <label style={{ display:'flex', flexDirection:'column', fontSize:13 }}>
+                <span>Transformer Location</span>
+                <input type="text" value={location} placeholder="e.g. Substation 12A" onChange={e => setLocation(e.target.value)} />
+              </label>
             </div>
           </div>
         </div>
@@ -184,7 +192,7 @@ export default function MaintenanceRecordForm({
               </thead>
               <tbody>
                 { (anomalies && anomalies.length ? anomalies : inspection.anomalies).filter(a => !a.deleted).map((a, idx) => (
-                  <tr key={a.id || idx}>
+                  <tr key={(a.id || 'row') + '_' + idx}>
                     <td>{idx + 1}</td>
                     <td>{a.classification || 'N/A'}</td>
                     <td>{a.severity || 'N/A'}</td>

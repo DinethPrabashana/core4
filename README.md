@@ -207,7 +207,7 @@ This release adds a complete Maintenance Record workflow on top of Phases 1–3.
 
 ### What’s included
 
-- New database table: `maintenance_records` to persist records with timestamps, engineer name, status, readings (as JSON), recommended action, notes, annotated image snapshot, and anomaly list.
+- New database table: `maintenance_records` to persist records with timestamps, engineer name, status, readings (as JSON), recommended action, notes, annotated image snapshot, anomaly list, and a snapshot `location` (editable per record so you can override or refine the transformer's stored location).
 - Backend REST API (full CRUD):
   - `GET /api/records?transformer_id=...&inspection_id=...` – list records (optionally filter by transformer and inspection)
   - `POST /api/records` – create a record snapshot
@@ -253,6 +253,7 @@ If it’s a fresh setup, starting the backend after `database.py` initialization
 - `notes` (string)
 - `annotated_image` (string, data URI)
 - `anomalies` (JSON string, array)
+- `location` (string, snapshot of transformer location at time of record; can be edited without changing transformer master record)
 - `created_at`, `updated_at` (string)
 
 ### Notes

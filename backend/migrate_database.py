@@ -101,6 +101,7 @@ def migrate_database():
                 notes TEXT,
                 annotated_image TEXT,
                 anomalies TEXT,
+                location TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (transformer_id) REFERENCES transformers (id) ON DELETE CASCADE,
@@ -108,6 +109,16 @@ def migrate_database():
             )
         ''')
         print("✓ Created 'maintenance_records' table")
+
+        # Attempt to add location column if table existed without it
+        try:
+            cursor.execute("PRAGMA table_info(maintenance_records)")
+            cols = [r[1] for r in cursor.fetchall()]
+            if 'location' not in cols:
+                cursor.execute('ALTER TABLE maintenance_records ADD COLUMN location TEXT')
+                print("✓ Added 'location' column to existing maintenance_records table")
+        except Exception as e:
+            print(f"(i) Skipped adding location column (maybe already exists): {e}")
         
         conn.commit()
         print("\n✓ Migration completed successfully!")

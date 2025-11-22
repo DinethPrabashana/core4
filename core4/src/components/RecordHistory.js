@@ -107,6 +107,7 @@ export default function RecordHistory({ transformer, inspection = null, onClose 
                         <th>Date/Time</th>
                         <th>Saved At</th>
                         <th>Engineer</th>
+                        <th>Location</th>
                         <th>Status</th>
                         <th>Anomalies</th>
                         <th>Actions</th>
@@ -132,6 +133,7 @@ export default function RecordHistory({ transformer, inspection = null, onClose 
                             <td onClick={() => openRecord(r)} className="cell-link">{r.record_timestamp}</td>
                             <td onClick={() => openRecord(r)} className="cell-link">{savedAt || '—'}</td>
                             <td onClick={() => openRecord(r)} className="cell-link">{r.engineer_name || 'N/A'}</td>
+                            <td onClick={() => openRecord(r)} className="cell-link">{r.location || transformer.location || 'N/A'}</td>
                             <td onClick={() => openRecord(r)} className="cell-link"><span className={`status-badge ${statusClass}`}>{r.status || 'N/A'}</span></td>
                             <td onClick={() => openRecord(r)} className="cell-link">{anomalyCount}</td>
                             <td>
@@ -171,6 +173,10 @@ export default function RecordHistory({ transformer, inspection = null, onClose 
                       <div className="value">{selectedRecord.engineer_name || 'N/A'}</div>
                     </div>
                     <div>
+                      <div className="label">Location</div>
+                      <div className="value">{selectedRecord.location || transformer.location || 'N/A'}</div>
+                    </div>
+                    <div>
                       <div className="label">Status</div>
                       <div className="value"><span className={`status-badge ${(selectedRecord.status || '').toLowerCase().replace(/\s+/g,'-')}`}>{selectedRecord.status || 'N/A'}</span></div>
                     </div>
@@ -190,11 +196,12 @@ export default function RecordHistory({ transformer, inspection = null, onClose 
                         <table className="records-table compact">
                           <thead>
                             <tr>
-                              <th>#</th>
-                              <th>Type</th>
-                              <th>Severity</th>
-                              <th>Position</th>
-                              <th>Size</th>
+                               <th>#</th>
+                               <th>Type</th>
+                               <th>Severity</th>
+                               <th>Comment</th>
+                               <th>Position</th>
+                               <th>Size</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -203,6 +210,7 @@ export default function RecordHistory({ transformer, inspection = null, onClose 
                                 <td>{idx + 1}</td>
                                 <td>{a.classification || 'N/A'}</td>
                                 <td><span className={`severity-pill ${(a.severity || '').toLowerCase()}`}>{a.severity || 'N/A'}</span></td>
+                                <td>{a.comment ? a.comment : '—'}</td>
                                 <td>({Math.round(a.x)}, {Math.round(a.y)})</td>
                                 <td>{Math.round(a.w)}x{Math.round(a.h)}</td>
                               </tr>
