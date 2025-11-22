@@ -1,281 +1,486 @@
-# Thermal Image Anomaly Detection System
+<!-- =================================================================== -->
+# Thermal Transformer Inspection & Maintenance Record System
+<!-- =================================================================== -->
 
-This project is a web-based application designed for the inspection of electrical transformers using thermal imaging. It leverages an AI-powered backend to analyze thermal images against a baseline, automatically detecting and classifying potential faults like loose joints and overloads.
-
-The user-friendly interface allows inspectors to upload images, review AI-generated analysis, add their own manual annotations, and generate a comprehensive inspection report.
-
----
-
-## Key Features
-
-- **Image Comparison:** Upload and compare a standard "Baseline" image with a "Thermal" (maintenance) image.
-- **Persistent Data Storage:** All transformer and inspection data is saved in a robust SQLite database.
-- **AI-Powered Analysis:** A Python backend uses computer vision techniques (image alignment, color difference analysis) to automatically detect hot spots and other anomalies.
-- **Anomaly Classification:** AI automatically classifies anomalies as `Faulty` or `Potentially Faulty` and identifies subtypes like `LooseJoint` or `PointOverload`.
-- **Interactive Annotations:** View AI-detected anomalies as bounding boxes directly on the thermal image.
-- **Manual Review & Annotation:**
-    - Draw new bounding boxes to manually identify anomalies the AI may have missed.
-    - For manually added boxes, classify them as `Faulty`, `Potentially Faulty`, or `Normal` using a simple dropdown.
-    - Add comments or reasons for any anomaly, whether AI-detected or manual.
-    - Delete incorrect or irrelevant anomaly detections.
-- **Inspection Workflow:** Track the progress of an inspection from image upload to final review.
+Department of Electronic & Telecommunication Engineering (EN)  
+Department of Biomedical Engineering (BM)  
+University of Moratuwa  
+Course: EN3350 – Software Design Competition  
+Last Modified: 2025-11-23  
 
 ---
 
-## Tech Stack
-
-- **Frontend:** React.js
-- **Backend:** Python with Flask, SQLite Database
-- **Computer Vision:** OpenCV
+## Table of Contents
+1. Overview
+2. Competition Context & Requirements
+3. System Architecture & Tech Stack
+4. Method Used (Detection & Annotation Pipeline)
+5. Phase Implementation Summary (FR1–FR4)
+6. Phase-wise Setup & Usage
+7. End-to-End UI Usage Walkthrough (Step by Step)
+8. Data Models
+9. API Endpoints
+10. Annotation System Details
+11. Maintenance Record Workflow
+12. Setup & Installation (Backend & Frontend)
+13. Export & Reporting
+14. Troubleshooting & Common Issues
+15. Known Limitations
+16. Roadmap / Future Enhancements
+17. Repository Structure
+18. Conclusion
 
 ---
 
-## Project Structure
+## 1. Overview
+This web application digitizes thermal inspection workflows for distribution transformers. It supports:
+- Transformer master data management
+- Baseline vs maintenance image comparison
+- Automated anomaly detection using computer vision
+- Interactive manual annotation & feedback capture
+- Maintenance record sheet generation (snapshot of image + anomalies + engineer inputs) with PDF export
 
-The project is divided into two main parts:
+The goal is a traceable, efficient, and extensible inspection & maintenance pipeline.
 
-```text
-/
-├── backend/      # Contains the Python Flask server and all AI/CV logic
-└── core4/        # Contains the React.js frontend application
-```
+### 1.1 Background
+Electric power utilities routinely perform thermal imaging of distribution transformers to uncover early warning signs such as overheating, loose joints, insulation degradation, and load imbalance. Traditional workflows rely on manual side‑by‑side visual comparison, which is slow, subjective, and difficult to audit. A digitized, automated, and traceable pipeline reduces human error, accelerates decision making, and creates a reliable historical knowledge base for asset management.
+
+### 1.2 Challenge
+Design and implement an end‑to‑end software solution that:
+1. Captures and manages transformer master data and associated baseline / maintenance thermal images.
+2. Automatically detects temperature or intensity anomalies in newly uploaded maintenance images versus stored baselines.
+3. Enables engineers to validate, correct, or augment anomalies through interactive annotation tools (human‑in‑the‑loop feedback).
+4. Generates structured, printable maintenance record sheets embedding annotated thermal imagery and engineer inputs for traceable operational decisions.
+
+### 1.3 Required Features (Phase-wise Summary)
+Phase 1 – Transformer & Baseline Management:
+- Admin interface for transformer CRUD (ID, location, capacity).
+- Upload baseline and maintenance images tagged per transformer.
+- Tag baseline images with environmental condition (Sunny / Cloudy / Rainy).
+
+Phase 2 – Automated Anomaly Detection:
+- AI/CV comparison engine (baseline vs maintenance) producing potential hotspots.
+- Side‑by‑side comparison view with zoom, pan, reset.
+- Automatic anomaly overlay (bounding boxes, severity heuristics, metadata).
+
+Phase 3 – Interactive Annotation & Feedback:
+- Adjust/delete AI detections; draw new anomaly boxes or regions.
+- Persist annotations with user, timestamp, classification, notes.
+- Maintain feedback log (original vs final annotations) for future model refinement; support export.
+
+Phase 4 – Maintenance Record Generation:
+- Produce digital maintenance form with transformer metadata, timestamp, annotated image.
+- Engineer fills status, readings, recommended action, remarks, location override.
+- Persist and retrieve records; provide inspection‑scoped history and PDF export.
+
+### 1.4 Judging Criteria (Condensed)
+- Functionality: Completeness of FR1–FR4 deliverables.
+- Scalability & Architecture: Modular, extensible, clean layering (frontend, API, CV core, persistence).
+- Efficiency: Responsive image load, detection latency, UI interactivity.
+- ML / CV Integration: Robustness and clarity of anomaly detection pipeline.
+- Creativity & UX: Usability improvements, intuitive annotation tools, polished design system.
+- Quality: Code structure, documentation, traceability (timestamps, logs), potential test coverage.
+
+### 1.5 Resources Provided (Competition Context)
+- Sample thermal image dataset (baseline & maintenance pairs).
+- Handwritten maintenance sheet examples / layout references.
+- UI mockups / wireframes (phase screens & form layouts).
+- Suggested heuristic thresholds (temperature / intensity deviation guidelines).
+
+### 1.6 Final Deliverables (Competition)
+- Integrated web system covering all four phases.
+- Source code in public GitHub repository with README & deployment steps.
+- Optional test coverage report (future enhancement here).
+- Demo videos per milestone (as per competition instructions).
+- Exportable data artifacts (annotations, maintenance records PDF).
 
 ---
+## 2. Competition Context & Requirements
+The project fulfills phase-wise functional requirements (FR1–FR4) defined in the EN3350 Software Design Competition brief. Judging focuses on functionality, scalability, efficiency, ML integration, creativity, and quality (code + documentation).
 
-## Setup and Installation Guide
+---
+## 3. System Architecture & Tech Stack
+Frontend (React) communicates with a Flask (Python) backend via REST over HTTP.
+- Frontend: React, reusable component-driven UI, theming via CSS variables.
+- Backend: Flask, SQLite, OpenCV (classical CV pipeline for alignment & hotspot detection).
+- Storage: SQLite (`backend.db`).
+- Export: ReportLab (PDF maintenance record generation).
 
-To run this project on your local machine, you will need to set up both the backend server and the frontend application.
+High-Level Flow:
+1. User creates transformer & uploads baseline image.
+2. Maintenance image uploaded → AI comparison → anomaly candidates.
+3. User refines anomalies (add/edit/delete/comments/classification).
+4. User generates maintenance record snapshot.
+5. Record persisted; historical retrieval & PDF export available.
 
+---
+## 4. Method Used (Detection & Annotation Pipeline)
+This project uses a classical computer vision approach (no heavy deep learning dependency) optimized for explainability and responsiveness.
+
+Detection Stages:
+1. Preprocessing: Convert images to consistent color space; optionally normalize intensity; resize if oversized.
+2. Alignment: Basic feature/keypoint or template-based alignment (ensures baseline and maintenance images are spatially comparable even with small camera shifts).
+3. Temperature Proxy Extraction: Use pixel intensity (or extracted thermal channel) difference between maintenance and baseline to approximate heat delta.
+4. Thresholding & Region Proposal: Apply adaptive or fixed delta threshold; generate candidate hot regions; perform morphological filtering to remove noise speckles.
+5. Bounding Box Consolidation: Merge overlapping regions; discard regions below minimum area to reduce false positives.
+6. Severity & Classification Heuristics: Relative intensity delta + area used to classify Faulty vs Potentially Faulty; subtype labels (e.g., LooseJoint, PointOverload) derived from shape and localized intensity pattern.
+7. Anomaly Packaging: Each region stored with coordinates, size, severity score, and classification guess.
+
+Annotation Enhancement:
+- User Interaction Layer adds manual boxes, edits geometry, deletes false positives.
+- Each action persists with timestamps (created_at/updated_at), classification override, and notes (comment rationale).
+- Final accepted anomalies become part of maintenance record snapshot.
+
+Why Classical CV:
+- Faster iteration in competition context.
+- Lower dependency footprint; easier portability.
+- Transparent heuristics useful for audit and field validation.
+
+Potential Upgrade Path:
+- Swap detection stage (steps 3–6) with a trained thermal anomaly segmentation model.
+- Use feedback logs (original vs final annotations) to create supervised training dataset.
+
+## 5. Phase Implementation Summary (FR1–FR4)
+Below is an expanded breakdown of each phase: objectives, user workflow, backend logic, data flow, UI components, current implementation status, and potential improvement directions.
+
+### Phase 1 – Transformer & Baseline Management
+**Objectives:** Establish foundational entities (transformers, baseline images) and environmental context.
+**Core Features (FR1.1–FR1.3):**
+- Transformer CRUD: Create, list, edit, delete transformer records (ID, location, capacity).
+- Image Upload: Associate baseline or maintenance images with a transformer; store type and timestamp.
+- Environment Tagging: Baseline images labeled (Sunny / Cloudy / Rainy) for contextual comparison.
+**User Workflow:**
+1. Navigate to Transformer list.
+2. Add a transformer (form submission triggers POST to backend).
+3. Upload baseline image with environment dropdown selection.
+4. (Later) Upload maintenance images as inspections progress.
+**Backend Logic:**
+- Validation on required transformer fields.
+- Image metadata persisted (file path or encoded reference, type, environment condition).
+- Relational links: `transformers` → `inspections` (or image entries).
+**Data Flow:** Frontend form → REST POST → SQLite insert → subsequent GET lists populate tables.
+**UI Components:** TransformerList (table + modal), image upload form, environment selector.
+**Persistence:** SQLite ensures retrieval and chronological ordering (ascending ID used for inspection numbering).
+**Current Status:** Fully implemented; baseline tagging available; inspection numbering derived from order.
+**Potential Improvements:** Add bulk import, environment condition analytics, file size validation, and image thumbnail generation.
+
+### Phase 2 – Automated Detection
+**Objectives:** Provide automated anomaly discovery comparing maintenance image against baseline.
+**Core Features (FR2.1–FR2.3):**
+- Comparison Engine: Align images; compute intensity/thermal deltas; identify hotspot candidates.
+- Visual Side-by-Side: Baseline left, maintenance right with synchronized inspection context.
+- Automatic Marking: Bounding boxes + severity heuristic (faulty vs potentially faulty) + subtype.
+**User Workflow:**
+1. Select maintenance inspection.
+2. Trigger AI analysis (button or auto-run).
+3. Review overlays (bounding boxes + list panel).
+**Backend Logic:**
+- Receive inspection ID → load baseline + maintenance image paths.
+- Perform preprocessing (resize/alignment) and threshold segmentation.
+- Return JSON anomalies (coords, size, classification, severity score, ID source=AI).
+**Data Flow:** Frontend fetch → display overlays; anomalies cached client-side for annotation phase.
+**UI Components:** InspectionViewModal (side-by-side layout, analyze button, anomaly table, mode toggle).
+**Persistence:** Raw AI anomalies initially transient until user interacts (Phase 3 save consolidates).
+**Current Status:** Implemented with classical CV; heuristics encoded; severity tags visible.
+**Potential Improvements:** Confidence scoring UI, heatmap overlay layer, adaptive thresholds per environment condition.
+
+### Phase 3 – Interactive Annotation & Feedback
+**Objectives:** Incorporate human validation to refine AI results and capture corrective intelligence.
+**Core Features (FR3.1–FR3.3):**
+- Editing Tools: Resize, move, delete existing boxes; add new anomalies manually.
+- Metadata Persistence: Store timestamps (`created_at`/`updated_at`), classification override, notes/comments, source (AI/User).
+- Feedback Log: Historical log enabling model improvement dataset assembly (exportable in JSON/CSV if endpoints retained).
+**User Workflow:**
+1. Enter Edit mode in inspection view.
+2. Adjust bounding boxes as needed; add new ones for missed hotspots.
+3. Add classification and optional reasoning notes.
+4. Changes auto-saved (no manual save required) or saved on explicit action depending implementation.
+**Backend Logic:**
+- Endpoint accepts full annotation list; upserts records preserving original `created_at` when present.
+- Maintains annotation_logs for action trace (add/edit/delete) if table enabled.
+**Data Flow:** Client side state → POST full array → SQLite commit → GET reload reproduces geometry and metadata.
+**UI Components:** Shared ZoomAnnotatedImage (edit vs pan modes), annotation list panel, comments inputs.
+**Persistence:** Durable storage of each bounding box with versioned timestamps; deletion irreversible (future soft-delete possible).
+**Current Status:** Fully implemented: ID namespacing resolves reload collisions; comments captured; zoom/pan unified.
+**Potential Improvements:** Polygonal annotations, multi-user conflict resolution, bulk edit tools, tag taxonomy expansion.
+
+### Phase 4 – Maintenance Record Sheet Generation
+**Objectives:** Produce a structured, immutable snapshot of inspection state with engineer context for audit and action planning.
+**Core Features (FR4.1–FR4.3):**
+- Record Form: Pre-fills transformer metadata, inspection number, timestamp, annotated image snapshot, anomaly list with comments.
+- Engineer Inputs: Status dropdown (OK / Needs Maintenance / Urgent Attention), voltage/current readings, recommended action, remarks, location override.
+- Persistence & Retrieval: Records stored with snapshot semantics; listing filterable by transformer and inspection; PDF export for reporting.
+**User Workflow:**
+1. After annotation refinement, click “Generate Maintenance Record”.
+2. Complete engineer fields; review anomaly list; save.
+3. Open Record History to view, select, or delete entries; export PDF.
+**Backend Logic:**
+- POST creates new `maintenance_records` row including serialized anomalies and base64 annotated image.
+- GET filters by transformer_id and optionally inspection_id.
+- DELETE removes record (no audit trail yet).
+- PDF endpoint renders structured document (metadata header, annotated image, anomalies table, engineer inputs).
+**Data Flow:** Snapshot creation insulated from future annotation changes (frozen state).
+**UI Components:** MaintenanceRecordForm modal, RecordHistory modal (list + detail pane + zoom viewer), PDF export button.
+**Persistence:** Ensures traceability with `created_at`/`updated_at`; location stored as per-record snapshot (does not alter transformer master record).
+**Current Status:** Implemented with functioning PDF export; inspection-scoped record viewing; deletion support.
+**Potential Improvements:** Versioning/audit trail, role-based access, differential updates (track field changes), digital signature/approval workflow.
+
+### Cross-Phase Data Continuity
+- Transformer ID links all subsequent entities (inspections, annotations, records).
+- Annotations feed into records; record snapshots insulate historical decisions from later annotation modifications.
+- Feedback log enables potential ML dataset curation for future model training.
+
+### Summary Table (Condensed)
+| Phase | Primary Entities | User Action Focus | Output Persisted | Export |
+|-------|------------------|-------------------|------------------|--------|
+| 1 | transformers, images | Create & tag | Transformer + image metadata | N/A |
+| 2 | anomalies (AI) | Analyze & review | Transient anomaly proposals | N/A |
+| 3 | annotations, logs | Refine & comment | Durable annotations + logs | JSON/CSV (optional) |
+| 4 | maintenance_records | Snapshot & report | Record snapshot (image + anomalies + inputs) | PDF |
+
+### Improvement Themes Forward
+1. Robustness: Integrate confidence scores, adaptive thresholds, and thermal calibration.
+2. Usability: Polygon tools, bulk operations, accessibility enhancements (keyboard navigation, ARIA).
+3. Traceability: Add audit trails for record deletion & annotation edits.
+4. Intelligence: Leverage feedback logs for semi-supervised model retraining.
+5. Governance: Implement authentication/roles and approval workflows on maintenance records.
+
+---
+## 6. Phase-wise Setup & Usage
+This section explains what is minimally required to leverage each phase, assuming prior phases are complete.
+
+Phase 1 (Transformer & Baseline):
+- Required: Transformer creation, baseline image upload with environment tag.
+- Usage Trigger: After adding at least one baseline, system ready for maintenance comparisons.
+
+Phase 2 (Automated Detection):
+- Required: At least one baseline and one maintenance image for the same transformer.
+- Action: Open inspection view → run AI analysis → automatic anomaly proposals generated.
+
+Phase 3 (Annotation & Feedback):
+- Required: Completed Phase 2 analysis output.
+- Action: Switch to Edit mode → refine boxes (add/edit/delete) → add comments/classification.
+- Persistence: Leave view or save; annotations auto-sent to backend.
+- Export (optional): Annotation logs in JSON/CSV if endpoints enabled.
+
+Phase 4 (Maintenance Records):
+- Required: Annotated image (AI only or AI + manual refinements).
+- Action: Click “Generate Maintenance Record” → fill engineer form → save.
+- Result: Record stored with snapshot; Retrieval via Records button (inspection-scoped) and PDF export.
+
+## 7. End-to-End UI Usage Walkthrough (Step by Step)
+Follow these steps after setup to use the system effectively:
+1. Launch Backend: `python app.py` (see Section 10). Ensure it runs on `http://localhost:8000`.
+2. Launch Frontend: `npm start` in `core4/` → opens `http://localhost:3000`.
+3. Create Transformer: Use the Transformers page (Add Transformer). Provide ID, location, capacity.
+4. Upload Baseline Image: Select transformer → upload image marked as Baseline; choose environment (Sunny/Cloudy/Rainy).
+5. Upload Maintenance Image: Add a new maintenance image (same transformer, Type = Maintenance).
+6. Open Inspection: Select maintenance image row → open inspection/analysis view.
+7. Run AI Analysis: Click Analyze (if not auto-run). Baseline & maintenance images display side-by-side.
+8. Review AI Anomalies: Bounding boxes appear on thermal image; severity and type listed.
+9. Adjust Anomalies:
+   - Drag to reposition, handles to resize.
+   - Delete incorrect boxes.
+   - Draw new boxes (manual additions) → set classification & add comment.
+10. Add/Refine Comments: Each anomaly row supports notes/comments (stored in snapshot & record).
+11. Switch Modes: Use Zoom/Pan vs Edit mode (shared zoom component) to inspect details precisely.
+12. Generate Maintenance Record: Once satisfied with annotated image, click “Generate Maintenance Record”.
+13. Fill Engineer Form:
+    - Engineer Name
+    - Status (OK / Needs Maintenance / Urgent Attention)
+    - Voltage / Current readings
+    - Recommended Action
+    - Additional Remarks
+    - Location (override snapshot if needed)
+14. Save Record: Commits snapshot of annotated image + anomalies + inputs.
+15. View Record History: From transformer inspections, click “Records” for that inspection. A modal lists records with timestamps.
+16. Inspect Record Detail: Select a record to view annotated image, anomaly table, engineer inputs.
+17. Export PDF: Use “Export PDF” button (optionally filtered by inspection). Save structured maintenance sheet.
+18. Delete Record (If Needed): Use Delete action (irreversible) to remove a record.
+19. Print Record: Use browser print (Ctrl+P) for physical archiving.
+20. Iterate: New maintenance image uploads create additional inspections → repeat detection, annotation, record generation.
+
+---
+## 8. Data Models
+### transformers
+`id`, `name`, `location`, `capacity`, `created_at`
+### inspections
+`id`, `transformer_id`, `baseline_image_path`, `maintenance_image_path`, `created_at`
+### annotations
+`id`, `inspection_id`, `image_id`, `x`, `y`, `width`, `height`, `classification`, `notes`, `created_at`, `updated_at`, `source` (AI/User)
+### maintenance_records
+`id`, `transformer_id`, `inspection_id`, `record_timestamp`, `engineer_name`, `status`, `readings` (JSON), `recommended_action`, `notes`, `annotated_image` (data URI), `anomalies` (JSON array), `location`, `created_at`, `updated_at`
+### annotation_logs (if present)
+Historical audit of add/edit/delete actions (used for export & feedback).
+
+---
+## 9. API Endpoints (Summary)
+Transformers:
+- `GET /api/transformers`
+- `POST /api/transformers`
+- `PUT /api/transformers/:id`
+- `DELETE /api/transformers/:id`
+
+Inspections / Images:
+- `POST /api/inspections` (create inspection & link images)
+- `GET /api/inspections?transformer_id=...`
+
+Anomalies / Annotations:
+- `GET /api/annotations/:inspection_id`
+- `POST /api/annotations/:inspection_id` (save full set)
+
+Maintenance Records:
+- `GET /api/records?transformer_id=...&inspection_id=...`
+- `POST /api/records`
+- `GET /api/records/:id`
+- `PUT /api/records/:id`
+- `DELETE /api/records/:id`
+- `GET /api/records/export/pdf?transformer_id=...&inspection_id=...`
+
+Detection:
+- `POST /api/analyze` (maintenance vs baseline comparison → anomaly candidates)
+
+Migration:
+- `POST /api/migrate` or run `migrate_database.py` locally (depending on implementation).
+
+---
+## 10. Annotation System Details
+- Auto-save model: The frontend sends a complete annotation list; backend persists with original `created_at` & `updated_at` when provided.
+- Editing updates `updated_at` only; deletion logged in `annotation_logs` (if table enabled).
+- ID Namespacing prevents collision when reloading.
+- Classification options: Faulty / Potentially Faulty / Normal + subtype labels (e.g., LooseJoint).
+- Export (annotations) available in JSON/CSV if endpoints retained; maintenance records use PDF only.
+
+---
+## 11. Maintenance Record Workflow
+Snapshot Principle: Each saved record freezes the annotated image + anomaly set + engineer inputs. Future annotation changes do NOT retroactively alter existing records.
+Key Features:
+- Scoped History: View records per transformer or filtered by inspection.
+- PDF Export: Structured sheet with transformer metadata, timestamp, engineer inputs, anomaly table.
+- Location Override: Record stores a snapshot `location` independent of transformer master record.
+- Deletion: Irreversible (no audit trail yet). Future enhancement: soft delete + audit.
+
+---
+## 12. Setup & Installation
 ### Prerequisites
+- Python 3.10+
+- Node.js (LTS) & npm
 
-- **Node.js and npm:** Download & Install Node.js
-- **Python 3.x and pip:** Download & Install Python
-
-### 1. Backend Setup (Flask Server)
-
-The backend is responsible for all image processing, AI analysis, and data persistence.
-
-1.  **Navigate to the backend directory:**
-    ```bash
-    cd backend
-    ```
-
-2.  **Create and activate a virtual environment** (recommended):
-    ```bash
-    # For Windows
-    python -m venv venv
-    .\venv\Scripts\activate
-
-    # For macOS/Linux
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
-
-3.  **Install the required Python packages:**
-    ```bash
-    pip install Flask Flask-Cors numpy opencv-python scikit-image
-    pip install requirements.txt
-    ```
-
-4.  **Initialize the database:**
-    This command only needs to be run once. It will create the `backend.db` file and set up the necessary tables.
-    ```bash
-    python database.py
-    ```
-
-5.  **Run the backend server:**
-    ```bash
-    python app.py
-    ```
-
-    The server will start running on `http://localhost:8000`. Keep this terminal window open.
-
-### 2. Frontend Setup (React App)
-
-The frontend provides the user interface for interacting with the application.
-
-1.  **Open a new terminal window.**
-
-2.  **Navigate to the frontend directory:**
-    ```bash
-    cd core4
-    ```
-
-3.  **Install the required npm packages:**
-    ```bash
-    npm install
-    ```
-
-4.  **Run the frontend application:**
-    ```bash
-    npm start
-    ```
-
-    Your web browser should automatically open to `http://localhost:3000`, where you can now use the application. The frontend will communicate with the backend server you started in the other terminal.
-
-5. **Delete the default database entries:**
-first go  to the backend directory, and run. 
-```bash 
-python -c "import sqlite3; conn=sqlite3.connect('backend.db'); conn.executescript('DELETE FROM annotation_logs; DELETE FROM annotations; DELETE FROM inspections; DELETE FROM transformers; VACUUM;'); conn.commit(); conn.close(); print('Cleared tables and VACUUM complete')"
-```
-
-***Note all the data will be erased from the database***
-
-
-## Known Limitations
-
-- **The Flask API used in this project relies on Flask’s built-in development server, which is not suitable for production deployment. It is intended for testing and development only and may have performance and security limitations under real-world usage.**
-- **The AI models for anomaly detection and classification are only as good as the data they were trained on. Inaccuracies in the training data may lead to false positives or negatives in anomaly detection.**
-- **Real-time performance may vary based on the hardware specifications of the host machine, especially during AI inference and image processing tasks.**
-- **The system currently supports only JPEG image format for thermal images. Other formats like PNG or BMP are not supported at this time.**
-- **Network latency may affect the performance of the application, especially the communication between the frontend and backend servers.**
-
----
-
-## Annotation Log Export Format
-
-The system provides export functionality for annotation logs in both JSON and CSV formats. These exports are now concise and structured for clarity:
-
-### JSON Export
-- **Grouped by Inspection**: Each inspection contains its transformer, images, and a list of annotation actions.
-- **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included.
-- **Human-readable IDs**:
-  - `inspection_id` shows the Inspection Number as seen in the transformer’s Inspections tab, e.g. `T1-INSP1`.
-  - `transformer_id` shows the Transformer Number from the transformers table.
-  - `image_id` mirrors the Inspection Number (same as `inspection_id`).
-- **Structure Example:**
-
-```json
-[
-  {
-    "inspection_id": 1,
-    "transformer_id": 101,
-    "images": [
-      {
-        "image_id": "T1_faulty_001.jpg",
-        "actions": [
-          {
-            "action_type": "added",
-            "timestamp": "2025-10-17T12:34:56Z",
-            "user_id": "inspectorA",
-            "notes": "Confirmed anomaly",
-            "annotation": { ... },
-            "ai_prediction": { ... },
-            "user_annotation": { ... }
-          },
-          // ... more actions
-        ]
-      }
-      // ... more images
-    ]
-  }
-  // ... more inspections
-]
-```
-
-### CSV Export
-- **Flat Table**: Each row represents a single annotation action, with clear columns for inspection, transformer, image, action, annotation details, user, and timestamp.
-- **De-duplicated**: For each annotation, only the first occurrence (earliest timestamp) of each action type (added, edited, deleted) is included to avoid repeated entries from multiple saves.
-- **Human-readable IDs**:
-  - `inspection_id` shows the Inspection Number as seen in the transformer’s Inspections tab, e.g. `T1-INSP1`.
-  - `transformer_id` shows the Transformer Number from the transformers table.
-  - `image_id` mirrors the Inspection Number (same as `inspection_id`).
-## Annotation System Overview
-
-The annotation system allows users to interactively add, edit, and delete bounding boxes (markers) on thermal images to identify anomalies. Each annotation records:
-
-- **created_at**: Timestamp when the bounding box was first added (set by the frontend, preserved by the backend).
-- **updated_at**: Timestamp of the last edit or resize (set by the frontend, preserved by the backend).
-- **user_id**: The user who performed the action.
-- **notes**: Optional comments or reasons for the annotation.
-- **classification**: Faulty, Potentially Faulty, or Normal.
-
-Annotations are displayed in the Analysis Log table, showing the user and time for each action. The log persists across saves and reloads, accurately reflecting when each bounding box was added or edited.
-
-
-### Backend Annotation Persistence
-
-- **Database Table:** Annotations are stored in the `annotations` table in the SQLite database. Each record includes fields for `id`, `inspection_id`, `image_id`, bounding box coordinates, `created_at`, `updated_at`, `user_id`, `notes`, and `classification`.
-- **API Endpoint:** The backend provides `/api/annotations/<inspection_id>` for saving and loading annotations. It accepts annotation data from the frontend and ensures timestamps and user info are preserved.
-- **Persistence Logic:** When annotations are saved, the backend checks for `created_at` and `updated_at` fields from the client and stores them as provided. If missing, it uses the server time. The backend (Flask/Python) exposes REST API endpoints for saving and loading annotations.
-
----
-
-## Phase 4 – Maintenance Record Sheet Generation
-
-This release adds a complete Maintenance Record workflow on top of Phases 1–3. Engineers can now generate a printable digital record for each inspection, including transformer metadata, the annotated thermal image, anomaly list, editable fields, and saved historical records.
-
-### What’s included
-
-- New database table: `maintenance_records` to persist records with timestamps, engineer name, status, readings (as JSON), recommended action, notes, annotated image snapshot, anomaly list, and a snapshot `location` (editable per record so you can override or refine the transformer's stored location).
-- Backend REST API (full CRUD + PDF export):
-  - `GET /api/records?transformer_id=...&inspection_id=...` – list records (optionally filter by transformer and inspection)
-  - `POST /api/records` – create a record snapshot
-  - `GET /api/records/:id` – fetch one record
-  - `PUT /api/records/:id` – update an existing record (e.g. notes/status)
-  - `DELETE /api/records/:id` – permanently delete a maintenance record
-  - `GET /api/records/export/pdf?transformer_id=...&inspection_id=...` – download a structured PDF of records
-- Frontend UI:
-  - In the inspection view, a “Generate Maintenance Record” button appears once an annotated image exists.
-  - A form modal clearly separates System Data (transformer metadata, inspection number) from Engineer Inputs. Inputs include: Engineer, Status (OK / Needs Maintenance / Urgent Attention), Voltage/Current, Recommended Action, Additional Remarks, and Location. It shows the annotated thermal image and a table of anomalies (with comments).
-  - Each inspection row now has a dedicated “Records” button to view only that inspection’s maintenance records (scoped history).
-  - Record History modal supports in-table and detail-pane deletion of individual records (with confirmation).
-  - Export PDF button in Record History to download all records for the transformer, optionally scoped to the selected inspection.
-  - Print-ready layout via the browser’s print dialog.
-  - Human-friendly inspection numbering displayed (e.g. `T1-INSP3`) derived from order of inspections for a transformer.
-
-### One-time migration
-
-If you already have an existing database, run a one-time migration to create the new `maintenance_records` table:
-
+### Backend (Windows Example)
 ```bat
-cd "core4\\backend" && python migrate_database.py
+cd backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+python database.py   :: initializes schema
+python app.py        :: starts server at http://localhost:8000
 ```
 
-If it’s a fresh setup, starting the backend after `database.py` initialization will already include the table via `schema.sql`.
+### Backend (macOS/Linux)
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python database.py
+python app.py
+```
 
-### How to use
+### Database Migration (if upgrading Phase 3 → Phase 4)
+```bash
+python migrate_database.py
+```
 
-1. Open any inspection and run AI analysis, review and annotate if needed.
-2. Click “Generate Maintenance Record”.
-3. Fill in engineer inputs and save. This stores a snapshot of the annotated image and anomaly list.
-4. To view history for a specific inspection, open the transformer’s inspections page and click that inspection’s “Records” button.
-5. In the Record History modal you can select a record to view details or delete it.
+### Frontend
+```bash
+cd core4
+npm install
+npm start
+```
 
-### Data model (maintenance_records)
+### Optional: Clean Database (Destructive!)
+```bash
+python -c "import sqlite3; c=sqlite3.connect('backend.db'); c.executescript('DELETE FROM annotation_logs; DELETE FROM annotations; DELETE FROM inspections; DELETE FROM transformers; VACUUM;'); c.commit(); c.close(); print('Cleared')"
+```
 
-- `id` (PK)
-- `transformer_id` (FK)
-- `inspection_id` (FK, nullable)
-- `record_timestamp` (string)
-- `engineer_name` (string)
-- `status` (string)
-- `readings` (JSON string, e.g., { voltage, current })
-- `recommended_action` (string)
-- `notes` (string)
-- `annotated_image` (string, data URI)
-- `anomalies` (JSON string, array)
-- `location` (string, snapshot of transformer location at time of record; can be edited without changing transformer master record)
-- `created_at`, `updated_at` (string)
+---
+## 13. Export & Reporting
+- Maintenance Records: PDF only via `/api/records/export/pdf` or UI button (structured layout + anomalies + engineer inputs).
+- Annotation Logs: JSON/CSV (if enabled) for model feedback datasets.
+- Printing: Browser print dialog formats record detail pane cleanly.
 
-### Phase 4 requirements mapping (6.2 FR4)
+---
+## 14. Troubleshooting & Common Issues
+- Missing Packages: Ensure `pip install -r requirements.txt` succeeded (ReportLab, Flask-Cors, OpenCV).
+- Database Schema Errors: Run `migrate_database.py` after pulling new code.
+- Large Image Performance: Resize thermal images before upload (recommended <3MB).
+- CORS Failures: Confirm backend running on port 8000 before starting frontend.
+- PDF Generation Error (e.g., `NameError: inch`): Ensure `from reportlab.lib.units import inch` exists in PDF module.
 
-- FR4.1 Generate Maintenance Record Form
-  - Includes transformer metadata (ID, location, type), inspection number, and record timestamp
-  - Embedded annotated thermal image from analysis with anomaly markers
-  - Anomalies table with type, severity, location, size, and comments
-- FR4.2 Editable Engineer Input Fields
-  - Inputs: Engineer name, status, readings (voltage/current), recommended action, additional remarks, and location
-  - Status uses dropdown; timestamp uses a date-time picker; inputs are visually separated from system-generated content
-- FR4.3 Save and Retrieve Completed Records
-  - Records saved to SQLite with transformer_id, inspection_id, timestamps; retrievable per transformer and per inspection; history viewer included
+---
+## 15. Known Limitations
+- Development Flask server (not production-hardened).
+- Classical CV heuristics (could be improved with trained thermal ML models).
+- No user authentication / role-based access yet.
+- JPEG only supported for thermal images.
+- No audit trail for maintenance record deletions.
+- Annotation export may omit advanced polygon support (bounding boxes only).
 
-Additional Technical Requirements
-- Clean, printable UI and export to PDF. Traceability via created_at and updated_at timestamps for each record
+---
+## 16. Roadmap / Future Enhancements
+- User Authentication & Roles (Engineer / Admin / Viewer)
+- Dark Mode & Theme Customization
+- Model Retraining Pipeline using annotation feedback
+- Audit Trail for record deletes & annotation edits
+- Performance optimizations (vectorized hotspot detection)
+- Cloud/File Storage abstraction (S3 / Azure Blob)
+- Multi-format image support (PNG, TIFF)
+- Access Control & Multi-user concurrency handling
 
-### Notes
+---
+## 17. Repository Structure (Simplified)
+## 18. Conclusion
+This system delivers a full transformer thermal inspection workflow: structured data, automated anomaly detection, human validation, and traceable maintenance record generation with export. The classical CV pipeline + structured annotation feedback establishes a foundation for iterative ML improvements. Future enhancements (authentication, model retraining, audit trails, and advanced visualization) can be layered without disrupting existing modules thanks to clear phase separation and snapshot-based record design. The platform is ready for extension into production-grade reliability and intelligent maintenance analytics.
 
-- The record captures a snapshot. Subsequent changes to annotations do not retroactively alter saved records.
-- You can print the record form via the browser’s print dialog for PDF-ready export.
-- Deleting a record is irreversible; deletions are not currently logged (future enhancement could add audit trail).
-- Inspection numbers (`<TransformerNumber>-INSP<index>`) are assigned by chronological order (ascending ID) within each transformer.
+### Appendix A – Evaluation Rubrics (Summarized)
+Phase 1 (Example Distribution): Feature completeness, UI clarity, architecture quality, metadata handling, documentation & bonus innovation.
+Phase 2: Detection functionality, accuracy/robustness, code modularity, documentation clarity.
+Phase 3: Annotation functionality, backend integration & persistence, usability design, logging/export traceability, documentation.
+Phase 4: Maintenance form generation, editable fields & UX, backend integration/versioning, retrieval & export quality, documentation robustness.
+```text
+backend/
+  app.py                # Flask API
+  database.py           # Initial schema setup
+  migrate_database.py   # Phase 4 migration
+  anomaly_cv.py         # CV detection logic
+  requirements.txt
+  schema.sql
+core4/
+  src/
+    components/         # React components (modals, lists, forms)
+    style/              # Themed CSS modules
+    App.js / App.css
+  public/
+    index.html          # Font + meta
+data/                   # Sample transformer image folders
+```
+
+---
+## Attribution & Academic Use
+Developed as part of EN3350 Software Design Competition (University of Moratuwa). Use for educational and evaluation purposes only.
+
+---
+## License
+If a license is required for submission, add it here (e.g., MIT). Otherwise, default internal academic usage.
+
+---
+## Change Log (Recent)
+- Phase 4: Added `maintenance_records`, PDF export, snapshot logic, unified zoom component, global theming.
+- UI Modernization: Introduced design tokens, consolidated modal/table styling, improved zoom/pan viewer.
+
+---
+## Contact
+For academic inquiries: Department of Electronic & Telecommunication Engineering / Department of Biomedical Engineering, University of Moratuwa.
+
+---
+Enjoy building upon this foundation! Contributions and improvements encouraged.
