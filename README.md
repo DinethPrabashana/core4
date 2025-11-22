@@ -3,7 +3,6 @@
 <!-- =================================================================== -->
 
 Department of Electronic & Telecommunication Engineering (EN)  
-Department of Biomedical Engineering (BM)  
 University of Moratuwa  
 Course: EN3350 – Software Design Competition  
 Last Modified: 2025-11-23  
@@ -470,17 +469,10 @@ data/                   # Sample transformer image folders
 Developed as part of EN3350 Software Design Competition (University of Moratuwa). Use for educational and evaluation purposes only.
 
 ---
-## License
-If a license is required for submission, add it here (e.g., MIT). Otherwise, default internal academic usage.
 
 ---
 ## Change Log (Recent)
 - Phase 4: Added `maintenance_records`, PDF export, snapshot logic, unified zoom component, global theming.
 - UI Modernization: Introduced design tokens, consolidated modal/table styling, improved zoom/pan viewer.
 
----
-## Contact
-For academic inquiries: Department of Electronic & Telecommunication Engineering / Department of Biomedical Engineering, University of Moratuwa.
 
----
-Enjoy building upon this foundation! Contributions and improvements encouraged.
